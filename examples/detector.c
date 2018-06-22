@@ -58,16 +58,22 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     pthread_t load_thread = load_data(args);
     double time;
     int count = 0;
+    //int num_count=0;
     //while(i*imgs < N*120){
     while(get_current_batch(net) < net->max_batches){
         if(l.random && count++%10 == 0){
             printf("Resizing\n");
-            int dim = (rand() % 10 + 10) * 32;
-            if (get_current_batch(net)+200 > net->max_batches) dim = 608;
+            int dim_w = (rand() % 10 + 10) * 32;
+            int dim_h = dim_w * 2;
+            if (get_current_batch(net)+200 > net->max_batches)
+	    {
+		dim_w = 608;
+                dim_h = 1216;
+	    } 
             //int dim = (rand() % 4 + 16) * 32;
-            printf("%d\n", dim);
-            args.w = dim;
-            args.h = dim;
+            //printf("%2d%s%2d\n", dim_w,"*",dim_h);
+            args.w = dim_w;
+            args.h = dim_h;
 
             pthread_join(load_thread, 0);
             train = buffer;
@@ -76,7 +82,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
 
             #pragma omp parallel for
             for(i = 0; i < ngpus; ++i){
-                resize_network(nets[i], dim, dim);
+                resize_network(nets[i], dim_w, dim_h);
             }
             net = nets[0];
         }
@@ -122,6 +128,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
 #else
         loss = train_network(net, train);
 #endif
+        if(loss>50000) loss=50000;
         if (avg_loss < 0) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
 

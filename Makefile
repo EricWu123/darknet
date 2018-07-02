@@ -1,6 +1,6 @@
 GPU=1
 CUDNN=1
-OPENCV=0
+OPENCV=1
 OPENMP=0
 DEBUG=0
 
@@ -19,8 +19,7 @@ ALIB=libdarknet.a
 EXEC=darknet
 OBJDIR=./obj/
 
-nvcc=/usr/local/cuda-9.0/bin/nvcc
-CC=gcc
+CC=gcc -g
 NVCC=nvcc 
 AR=ar
 ARFLAGS=rcs

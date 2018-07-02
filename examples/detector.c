@@ -58,22 +58,20 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     pthread_t load_thread = load_data(args);
     double time;
     int count = 0;
-    //int num_count=0;
     //while(i*imgs < N*120){
     while(get_current_batch(net) < net->max_batches){
         if(l.random && count++%10 == 0){
             printf("Resizing\n");
-            int dim_w = (rand() % 10 + 10) * 32;
-            int dim_h = dim_w * 2;
-            if (get_current_batch(net)+200 > net->max_batches)
-	    {
-		dim_w = 608;
-                dim_h = 1216;
-	    } 
+            int dim = (rand() % 10 + 10) * 32;
+            if (get_current_batch(net)+200 > net->max_batches) dim = 608;
             //int dim = (rand() % 4 + 16) * 32;
-            //printf("%2d%s%2d\n", dim_w,"*",dim_h);
-            args.w = dim_w;
-            args.h = dim_h;
+            if (dim >512)
+            {
+                dim = 512;
+            }
+            printf("%d\n", dim);
+            args.w = dim;
+            args.h = dim;
 
             pthread_join(load_thread, 0);
             train = buffer;
@@ -82,7 +80,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
 
             #pragma omp parallel for
             for(i = 0; i < ngpus; ++i){
-                resize_network(nets[i], dim_w, dim_h);
+                resize_network(nets[i], dim, dim);
             }
             net = nets[0];
         }
@@ -128,7 +126,6 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
 #else
         loss = train_network(net, train);
 #endif
-        if(loss>50000) loss=50000;
         if (avg_loss < 0) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
 
@@ -604,11 +601,27 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         network_predict(net, X);
         printf("%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
         int nboxes = 0;
+        int i = 0;
         detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
+        for(i = 0;i < nboxes;i++)
+        {
+            int x = (dets[i].bbox.x - dets[i].bbox.w/2) * im.w;
+            int y = (dets[i].bbox.y - dets[i].bbox.h/2) * im.w;
+            int w = dets[i].bbox.w * im.w;
+            int h = dets[i].bbox.h * im.h;
+            image crop_im = crop_image(im,x,y,w,h);
+            predict_classifier();
+            char temp_name[32] = "11111";
+            sprintf(temp_name,"crop_image_%d",i);
+            save_image(crop_im,temp_name);
+            free_image(crop_im);
+        }
+        
         //printf("%d\n", nboxes);
         //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
         draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
+        
         free_detections(dets, nboxes);
         if(outfile){
             save_image(im, outfile);

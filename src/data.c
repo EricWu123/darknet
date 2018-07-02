@@ -507,11 +507,19 @@ void fill_truth(char *path, char **labels, int k, float *truth)
     memset(truth, 0, k*sizeof(float));
     int count = 0;
     for(i = 0; i < k; ++i){
-        if(strstr(path, labels[i])){
+        int len = strlen(labels[i]);
+        char* temp =  (char*)malloc(len);
+        for(int j = 0; j < len - 1; ++j)
+        {
+            temp[j] = labels[i][j];
+        }
+        temp[len - 1] = '\0';
+        if(strstr(path, temp)){
             truth[i] = 1;
             ++count;
             //printf("%s %s %d\n", path, labels[i], i);
         }
+        free(temp);
     }
     if(count != 1 && (k != 1 || count != 0)) printf("Too many or too few labels: %d, %s\n", count, path);
 }

@@ -1,5 +1,5 @@
 #include "darknet.h"
-
+#include <string.h>
 static int coco_ids[] = {1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90};
 
 
@@ -58,12 +58,16 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
     pthread_t load_thread = load_data(args);
     double time;
     int count = 0;
+    //int num_count=0;
     //while(i*imgs < N*120){
     while(get_current_batch(net) < net->max_batches){
         if(l.random && count++%10 == 0){
             printf("Resizing\n");
-            int dim = (rand() % 10 + 10) * 32;
-            if (get_current_batch(net)+200 > net->max_batches) dim = 608;
+            int dim = (rand()%10 + 10) * 32;
+            if (get_current_batch(net)+200 > net->max_batches)
+	        {
+		        dim = 618;
+	        } 
             //int dim = (rand() % 4 + 16) * 32;
             if (dim >512)
             {
@@ -126,6 +130,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
 #else
         loss = train_network(net, train);
 #endif
+        if(loss>50000) loss=50000;
         if (avg_loss < 0) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
 
@@ -565,9 +570,9 @@ void validate_detector_recall(char *cfgfile, char *weightfile)
 
 void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh, char *outfile, int fullscreen)
 {
-    list *options = read_data_cfg(datacfg);
-    char *name_list = option_find_str(options, "names", "data/names.list");
-    char **names = get_labels(name_list);
+    // list *options = read_data_cfg(datacfg);
+    // char *name_list = option_find_str(options, "names", "data/names.list");
+    // char **names = get_labels(name_list);
 
     image **alphabet = load_alphabet();
     network *net = load_network(cfgfile, weightfile, 0);
@@ -593,7 +598,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         //image sized2 = resize_max(im, net->w);
         //image sized = crop_image(sized2, -((net->w - sized2.w)/2), -((net->h - sized2.h)/2), net->w, net->h);
         //resize_network(net, sized.w, sized.h);
-        layer l = net->layers[net->n-1];
+        layer l = net->layers[net->n-1]; //the parameter of  the last layer
 
 
         float *X = sized.data;
@@ -603,6 +608,14 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         int nboxes = 0;
         int i = 0;
         detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
+        char name[32] = "11111";
+        
+        char **name_ = (char **)malloc(sizeof(char*)*nboxes);;
+        for(i = 0;i < nboxes;i++)
+        {
+            char* temp = (char*)malloc(32);
+            name_[i] = temp;   
+        }
         for(i = 0;i < nboxes;i++)
         {
             int x = (dets[i].bbox.x - dets[i].bbox.w/2) * im.w;
@@ -610,19 +623,33 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
             int w = dets[i].bbox.w * im.w;
             int h = dets[i].bbox.h * im.h;
             image crop_im = crop_image(im,x,y,w,h);
-            predict_classifier();
+            
+            predict_classifier_("cfg/tt100k_classifier.data","cfg/darknet19_tt100k.cfg","darknet19_tt100k_272.weights",name,crop_im);
+            printf("qqqq%s\n",name);
+            strcpy(name_[i], name);       
+            // name_[i] = name;
+            printf("tttttt%s\n",name_[i]);
             char temp_name[32] = "11111";
             sprintf(temp_name,"crop_image_%d",i);
             save_image(crop_im,temp_name);
             free_image(crop_im);
         }
-        
+        for(i = 0;i < nboxes;i++)
+        {
+            printf("dddddd%s\n",name_[i]);
+        }
         //printf("%d\n", nboxes);
         //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
-        draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
-        
+        // draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
+        draw_detections_(im,dets,nboxes,thresh,name_,alphabet);  
         free_detections(dets, nboxes);
+        for(i = 0;i < nboxes;i++)
+        {
+            char* temp = name_[i];
+            free(temp);            
+        }
+        free(name_);
         if(outfile){
             save_image(im, outfile);
         }

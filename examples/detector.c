@@ -608,8 +608,10 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         int nboxes = 0;
         int i = 0;
         detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
-        char name[32] = "11111";
-        
+
+        if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+
+        char name[32] = "11111"; 
         char **name_ = (char **)malloc(sizeof(char*)*nboxes);;
         for(i = 0;i < nboxes;i++)
         {
@@ -618,29 +620,34 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         }
         for(i = 0;i < nboxes;i++)
         {
-            int x = (dets[i].bbox.x - dets[i].bbox.w/2) * im.w;
-            int y = (dets[i].bbox.y - dets[i].bbox.h/2) * im.w;
-            int w = dets[i].bbox.w * im.w;
-            int h = dets[i].bbox.h * im.h;
-            image crop_im = crop_image(im,x,y,w,h);
-            
-            predict_classifier_("cfg/tt100k_classifier.data","cfg/darknet19_tt100k.cfg","darknet19_tt100k_272.weights",name,crop_im);
-            printf("qqqq%s\n",name);
-            strcpy(name_[i], name);       
-            // name_[i] = name;
-            printf("tttttt%s\n",name_[i]);
-            char temp_name[32] = "11111";
-            sprintf(temp_name,"crop_image_%d",i);
-            save_image(crop_im,temp_name);
-            free_image(crop_im);
+            if(dets[i].prob[0] > thresh)
+            {
+
+                int x = (dets[i].bbox.x - dets[i].bbox.w/2) * sized.w;
+                int y = (dets[i].bbox.y - dets[i].bbox.h/2) * sized.w;
+                int w = dets[i].bbox.w * sized.w;
+                int h = dets[i].bbox.h * sized.h;
+                printf("%d %d %d %d %d %d\n", x,y,w,h,sized.w,sized.h);
+                image crop_im = crop_image(sized,x,y,w,h);
+                
+                predict_classifier_("cfg/tt100k_classifier.data","cfg/darknet19_tt100k.cfg","darknet19_tt100k_272.weights",name,crop_im);
+                // printf("qqqq%s\n",name);
+                strcpy(name_[i], name);       
+                // name_[i] = name;
+                // printf("tttttt%s\n",name_[i]);
+                char temp_name[32] = "11111";
+                sprintf(temp_name,"crop_image_%d",i);
+                save_image(crop_im,temp_name);
+                free_image(crop_im);
+            }
         }
-        for(i = 0;i < nboxes;i++)
-        {
-            printf("dddddd%s\n",name_[i]);
-        }
+        // for(i = 0;i < nboxes;i++)
+        // {
+        //     printf("dddddd%s\n",name_[i]);
+        // }
         //printf("%d\n", nboxes);
         //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
-        if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+        // if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
         // draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
         draw_detections_(im,dets,nboxes,thresh,name_,alphabet);  
         free_detections(dets, nboxes);

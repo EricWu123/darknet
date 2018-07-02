@@ -624,7 +624,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
             {
 
                 int x = (dets[i].bbox.x - dets[i].bbox.w/2) * sized.w;
-                int y = (dets[i].bbox.y - dets[i].bbox.h/2) * sized.w;
+                int y = (dets[i].bbox.y - dets[i].bbox.h/2) * sized.h;
                 int w = dets[i].bbox.w * sized.w;
                 int h = dets[i].bbox.h * sized.h;
                 printf("%d %d %d %d %d %d\n", x,y,w,h,sized.w,sized.h);

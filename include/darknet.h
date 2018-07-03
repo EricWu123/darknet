@@ -798,4 +798,5 @@ size_t rand_size_t();
 float rand_normal();
 float rand_uniform(float min, float max);
 void predict_classifier_(char *datacfg, char *cfgfile, char *weightfile, char * name,image im);
+void predict_classifier_demo(network * net,char ** names,char *name,image im);
 #endif

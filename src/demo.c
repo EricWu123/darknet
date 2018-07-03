@@ -14,10 +14,12 @@
 #ifdef OPENCV
 
 static char **demo_names;
+static char **names_classifier;
 static image **demo_alphabet;
 static int demo_classes;
 
 static network *net;
+static network * net_classifier;
 static image buff [3];
 static image buff_letter[3];
 static int buff_index = 0;
@@ -89,6 +91,8 @@ void *detect_in_thread(void *ptr)
     float nms = .4;
 
     layer l = net->layers[net->n-1];
+    image display = buff[(buff_index+2) % 3];
+    image sized = buff_letter[(buff_index+2)%3];
     float *X = buff_letter[(buff_index+2)%3].data;
     network_predict(net, X);
 
@@ -125,16 +129,67 @@ void *detect_in_thread(void *ptr)
 
     if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
 
-    printf("\033[2J");
-    printf("\033[1;1H");
+    char name[32] = "11111"; 
+    int i;
+    // float thresh = 0.5;
+    char **name_ = (char **)malloc(sizeof(char*)*nboxes);;
+    for(i = 0;i < nboxes;i++)
+    {
+        char* temp = (char*)malloc(32);
+        name_[i] = temp;   
+    }
+    for(i = 0;i < nboxes;i++)
+    {
+        if(dets[i].prob[0] > demo_thresh)
+        {
+
+            // int x = (dets[i].bbox.x - dets[i].bbox.w/2) * sized.w;
+            // int y = (dets[i].bbox.y - dets[i].bbox.h/2) * sized.h;
+            // int w = dets[i].bbox.w * sized.w;
+            // int h = dets[i].bbox.h * sized.h;
+          // you must make sure the ratio of sized'height and size'weight is the same as the ratio of the display(original).
+            int x = (dets[i].bbox.x - dets[i].bbox.w/2) * display.w;
+            int y = (dets[i].bbox.y - dets[i].bbox.h/2) * display.h;
+            int w = dets[i].bbox.w * display.w;
+            int h = dets[i].bbox.h * display.h;
+            printf("%d %d %d %d %d %d\n", x,y,w,h,display.w,display.h);
+            image crop_im = crop_image(display,x,y,w,h);
+            
+            predict_classifier_demo(net_classifier,names_classifier,name,crop_im);
+            printf("qqqq%s\n",name);
+
+            strcpy(name_[i], name);       
+            // name_[i] = name;
+            // printf("tttttt%s\n",name_[i]);
+            char temp_name[32] = "11111";
+            sprintf(temp_name,"crop_image_%d",i);
+            save_image(crop_im,temp_name);
+            free_image(crop_im);
+        }
+    }
+    for(i = 0;i < nboxes;i++)
+    {
+        printf("dddddd%s\n",name_[i]);
+    }
+    // cvWaitKey(0);
+    // printf("\033[2J");
+    // printf("\033[1;1H");
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
-    image display = buff[(buff_index+2) % 3];
-    draw_detections(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
+    draw_detections_(display,dets,nboxes,demo_thresh,name_,demo_alphabet);
+    // image display = buff[(buff_index+2) % 3];
+    // draw_detections(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
     free_detections(dets, nboxes);
 
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
+    // cvWaitKey(0);
+    // int c = cvWaitKey(10);
+    // if(c == 32)
+    //   {
+    //     cvWaitKey(10);
+    //   }
+    // free_image(sized);
     return 0;
 }
 
@@ -198,7 +253,14 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     pthread_t fetch_thread;
 
     srand(2222222);
-
+    // the classifier
+    net_classifier = load_network("cfg/darknet19_tt100k.cfg","darknet19_tt100k_272.weights",0);
+    set_batch_network(net_classifier, 1);
+    list * options = read_data_cfg("cfg/tt100k_classifier.data");
+    char *name_list = option_find_str(options, "names", 0);
+    if(!name_list) name_list = option_find_str(options, "labels", "data/labels.list");
+    names_classifier = get_labels(name_list);
+    //the classifier end
     int i;
     demo_total = size_network(net);
     predictions = calloc(demo_frame, sizeof(float*));

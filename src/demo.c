@@ -37,6 +37,7 @@ static float *avg;
 static int demo_done = 0;
 static int demo_total = 0;
 double demo_time;
+int crop_i = 0; // used to count the num of the crop_image:detect_in_thread
 
 detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num);
 
@@ -92,7 +93,7 @@ void *detect_in_thread(void *ptr)
 
     layer l = net->layers[net->n-1];
     image display = buff[(buff_index+2) % 3];
-    image sized = buff_letter[(buff_index+2)%3];
+    // image sized = buff_letter[(buff_index+2)%3];
     float *X = buff_letter[(buff_index+2)%3].data;
     network_predict(net, X);
 
@@ -104,8 +105,11 @@ void *detect_in_thread(void *ptr)
     detection *dets = 0;
     int nboxes = 0;
     dets = avg_predictions(net, &nboxes);
+    //save video failed!!TAT
+    // char  video_name[32] = "./data/sign.avi";
+    // CvSize video_size  = cvSize(display.w,display.h);
 
-
+    // CvVideoWriter * out = cvCreateVideoWriter(video_name,CV_FOURCC('D','I','V','X'),20, video_size,1); 
     /*
        int i,j;
        box zero = {0};
@@ -130,7 +134,7 @@ void *detect_in_thread(void *ptr)
     if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
 
     char name[32] = "11111"; 
-    int i;
+    int i = 0;
     // float thresh = 0.5;
     char **name_ = (char **)malloc(sizeof(char*)*nboxes);;
     for(i = 0;i < nboxes;i++)
@@ -147,7 +151,8 @@ void *detect_in_thread(void *ptr)
             // int y = (dets[i].bbox.y - dets[i].bbox.h/2) * sized.h;
             // int w = dets[i].bbox.w * sized.w;
             // int h = dets[i].bbox.h * sized.h;
-          // you must make sure the ratio of sized'height and size'weight is the same as the ratio of the display(original).
+
+            // !!you must make sure the ratio of sized'height and size'weight is the same as the ratio of the display(original).
             int x = (dets[i].bbox.x - dets[i].bbox.w/2) * display.w;
             int y = (dets[i].bbox.y - dets[i].bbox.h/2) * display.h;
             int w = dets[i].bbox.w * display.w;
@@ -162,8 +167,12 @@ void *detect_in_thread(void *ptr)
             // name_[i] = name;
             // printf("tttttt%s\n",name_[i]);
             char temp_name[32] = "11111";
-            sprintf(temp_name,"crop_image_%d",i);
-            save_image(crop_im,temp_name);
+            sprintf(temp_name,"data/crop/crop_image_%d",crop_i);
+            crop_i++;
+            save_image(display,temp_name);
+            // IplImage * video_ipl = cvCreateImage(cvSize(display.w,display.h), IPL_DEPTH_8U, display.c);
+
+            // cvWriteFrame(out,video_ipl);
             free_image(crop_im);
         }
     }
@@ -176,6 +185,7 @@ void *detect_in_thread(void *ptr)
     // printf("\033[1;1H");
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
+    printf("count:%d" ,crop_i);
     draw_detections_(display,dets,nboxes,demo_thresh,name_,demo_alphabet);
     // image display = buff[(buff_index+2) % 3];
     // draw_detections(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);

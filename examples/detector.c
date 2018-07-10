@@ -623,12 +623,12 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
             if(dets[i].prob[0] > thresh)
             {
 
-                int x = (dets[i].bbox.x - dets[i].bbox.w/2) * sized.w;
-                int y = (dets[i].bbox.y - dets[i].bbox.h/2) * sized.h;
-                int w = dets[i].bbox.w * sized.w;
-                int h = dets[i].bbox.h * sized.h;
+                int x = (dets[i].bbox.x - dets[i].bbox.w/2) * im.w;
+                int y = (dets[i].bbox.y - dets[i].bbox.h/2) * im.h;
+                int w = dets[i].bbox.w * im.w;
+                int h = dets[i].bbox.h * im.h;
                 printf("%d %d %d %d %d %d\n", x,y,w,h,sized.w,sized.h);
-                image crop_im = crop_image(sized,x,y,w,h);
+                image crop_im = crop_image(im,x,y,w,h);
                 
                 predict_classifier_("cfg/tt100k_classifier.data","cfg/darknet19_tt100k.cfg","darknet19_tt100k_272.weights",name,crop_im);
                 // printf("qqqq%s\n",name);

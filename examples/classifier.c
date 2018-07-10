@@ -571,8 +571,13 @@ void predict_classifier_demo(network * net,char ** names,char *name,image im)
             int index = indexes[i];
             printf("%5.2f%%: %s\n", predictions[index]*100, names[index]);
         }
+
         int temp = indexes[0];
-        strcpy(name, names[temp]);
+        if(predictions[temp] * 100 >= 50) //if the accuracy is bigger than 50%
+            strcpy(name, names[temp]);
+        // else
+        //     strcpy(name, "FAKE");
+            // name = NULL;
         if(r.data != im.data) free_image(r);
         break;
     } 

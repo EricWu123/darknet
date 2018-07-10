@@ -283,7 +283,7 @@ void draw_detections_(image im, detection *dets, int num, float thresh, char **n
 
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
-                image label = get_label(alphabet, labelstr, (im.h*.03));
+                image label = get_label(alphabet, labelstr, (im.h*.003));
                 draw_label(im, top + width, left, label, rgb);
                 free_image(label);
             }

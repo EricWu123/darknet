@@ -134,7 +134,7 @@ void *detect_in_thread(void *ptr)
 
     if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
 
-    char name[32] = "11111"; 
+    char name[32] = "neg"; 
     int i = 0;
     // float thresh = 0.5;
     char **name_ = (char **)malloc(sizeof(char*)*nboxes);;
@@ -184,9 +184,9 @@ void *detect_in_thread(void *ptr)
     // cvWaitKey(0);
     // printf("\033[2J");
     // printf("\033[1;1H");
-    printf("\nFPS:%.1f\n",fps);
-    printf("Objects:\n\n");
-    printf("count:%d" ,crop_i);
+    printf("FPS:%.1f\n",fps);
+    printf("Objects:\n");
+    printf("count:%d\n\n" ,crop_i);
     draw_detections_(display,dets,nboxes,demo_thresh,name_,demo_alphabet);
     // image display = buff[(buff_index+2) % 3];
     // draw_detections(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
@@ -194,7 +194,7 @@ void *detect_in_thread(void *ptr)
 
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
-    // cvWaitKey(0);
+    cvWaitKey(0);
     // int c = cvWaitKey(10);
     // if(c == 32)
     //   {

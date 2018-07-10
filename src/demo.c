@@ -101,10 +101,11 @@ void *detect_in_thread(void *ptr)
        if(l.type == DETECTION){
        get_detection_boxes(l, 1, 1, demo_thresh, probs, boxes, 0);
        } else */
-    remember_network(net);
+    // remember_network(net);
     detection *dets = 0;
     int nboxes = 0;
-    dets = avg_predictions(net, &nboxes);
+    // dets = avg_predictions(net, &nboxes);
+    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes);
     //save video failed!!TAT
     // char  video_name[32] = "./data/sign.avi";
     // CvSize video_size  = cvSize(display.w,display.h);
@@ -169,7 +170,7 @@ void *detect_in_thread(void *ptr)
             char temp_name[32] = "11111";
             sprintf(temp_name,"data/crop/crop_image_%d",crop_i);
             crop_i++;
-            save_image(display,temp_name);
+            // save_image(display,temp_name);
             // IplImage * video_ipl = cvCreateImage(cvSize(display.w,display.h), IPL_DEPTH_8U, display.c);
 
             // cvWriteFrame(out,video_ipl);

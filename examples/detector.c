@@ -952,6 +952,83 @@ void test_folder(char *datacfg, char *cfgfile, char *weightfile, char *filename,
         
 
 }
+
+void extract_feature(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh, char *outfile, int fullscreen)
+{
+
+    DIR * dir;
+    struct dirent *direntp; 
+
+    // the classifier
+    net_classifier = load_network(cfgfile,weightfile,0);
+    set_batch_network(net_classifier, 1);
+    // list * options = read_data_cfg(datacfg);
+    // char *name_list = option_find_str(options, "names", 0);
+    // if(!name_list) name_list = option_find_str(options, "labels", "data/labels.list");
+    // names_classifier = get_labels(name_list);
+    //the classifier end
+
+
+    while(1){
+        char * input = (char *)malloc(sizeof(char) * 256);
+        char * txt_ = (char *)malloc(sizeof(char) * 256);
+        if(filename){
+            strcpy(input, filename);
+        } 
+        dir = opendir(input);
+
+        while ((direntp = readdir(dir)) != NULL)
+        {  
+        printf("file:%s\n", direntp->d_name);
+        if(strcmp(direntp->d_name,".") == 0 || strcmp(direntp->d_name,"..") == 0) continue;
+        // char * image_name = direntp->d_name;
+        // char * image_name = (char*)malloc(sizeof(char) * 32);
+        char image_name[32];
+        char s[32] = "1";
+        strcpy(image_name,direntp->d_name);
+        char * p = strchr(image_name,'.');
+        int n = (int)(p - image_name);
+        strncpy(s,image_name,n); 
+        char txt[256];
+        sprintf(txt,"/home/cidi/darknet/data/feature_label/%s.txt",s);//create label txt file
+        strcpy(txt_,txt);
+        printf("%s\n", txt_);
+        FILE *fpWrite=fopen(txt_,"w");  
+        if(fpWrite==NULL)  
+        {  
+            printf("%s\n", "open txt error");
+            return;  
+        }
+        
+        char buff[256];
+        sprintf(buff,"%s%s",input,direntp->d_name);
+        printf("%s\n",buff);
+        image im = load_image_color(buff,0,0);
+        // image sized = letterbox_image(im, net->w, net->h);
+
+        // time=what_time_is_it_now();
+
+        // char name[32] = "neg"; 
+        float features[1024] = {0};
+        predict_classifier_demo_(net_classifier,im,features);
+        fprintf(fpWrite, "%s ", s);
+        for(int i = 0;i < 1024;i++)
+        {
+            fprintf(fpWrite, " %f ", features[i]);
+        }
+
+        fprintf(fpWrite, "\n");
+        fclose(fpWrite);
+        free_image(im);
+    }
+    free(txt_);
+    free(input);
+    closedir(dir);
+    break;
+    }
+        
+
+}
 /*
 void censor_detector(char *datacfg, char *cfgfile, char *weightfile, int cam_index, const char *filename, int class, float thresh, int skip)
 {
@@ -1178,7 +1255,7 @@ void run_detector(int argc, char **argv)
         demo(cfg, weights, thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
     }
     else if(0 == strcmp(argv[2],"test_folder")) test_folder(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen);// this function is like test_detector, but for image folder
-    // else if(0==strcmp(argv[2],"feature")) extract_feature(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen); // this function is like "test_detector"
+    else if(0==strcmp(argv[2],"feature")) extract_feature(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen); // this function is like "test_detector"
     // else if(0==strcmp(argv[2], "extract")) extract_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip); 
     // else if(0==strcmp(argv[2], "censor")) censor_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip);
 }

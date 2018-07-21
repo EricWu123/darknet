@@ -5,6 +5,11 @@
 #include <string.h>
 #include <pthread.h>
 
+#include <sys/types.h>  
+#include <sys/stat.h>  
+#include <dirent.h> 
+#include <unistd.h>  
+
 #define SECRET_NUM -1234
 extern int gpu_index;
 
@@ -799,4 +804,5 @@ float rand_normal();
 float rand_uniform(float min, float max);
 void predict_classifier_(char *datacfg, char *cfgfile, char *weightfile, char * name,image im);
 void predict_classifier_demo(network * net,char ** names,char *name,image im);
+void predict_classifier_demo_(network * net,image im,float *features);
 #endif

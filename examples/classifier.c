@@ -555,7 +555,24 @@ void try_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filena
         if (filename) break;
     }
 }
+void predict_classifier_demo_(network * net,image im,float *features)
+{// this function is for extract features
+    float * temp = features; 
+    while(1){
+        image r = letterbox_image(im, net->w, net->h);
 
+        float *X = r.data;
+        features = network_predict(net, X);
+        // printf("features:%f\n", features[1000]);
+        for(int i = 0;i < 1024;i++)
+        {
+            temp[i] = features[i];
+        }
+
+        if(r.data != im.data) free_image(r);
+        break;
+    } 
+}
 void predict_classifier_demo(network * net,char ** names,char *name,image im)
 {// names is the labels read from the file, but name is predicted label.
     int top = 2;

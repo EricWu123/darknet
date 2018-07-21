@@ -555,6 +555,7 @@ void try_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filena
         if (filename) break;
     }
 }
+
 void predict_classifier_demo(network * net,char ** names,char *name,image im)
 {// names is the labels read from the file, but name is predicted label.
     int top = 2;
@@ -632,7 +633,8 @@ void predict_classifier_(char *datacfg, char *cfgfile, char *weightfile, char *n
             // printf("111111%s\n",names[index]);  
         }
         int temp = indexes[0];
-        strcpy(name, names[temp]);
+        if(predictions[temp] * 100 >= 50) //if the accuracy is bigger than 50%
+            strcpy(name, names[temp]);
         // name = names[temp];
         // printf("1111%s\n",name);
         // name =  names[indexes[0]];

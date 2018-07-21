@@ -1,8 +1,9 @@
 #include "darknet.h"
-#include <string.h>
+// #include <string.h>
+ 
 static int coco_ids[] = {1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90};
-
-
+static char **names_classifier;
+static network * net_classifier;
 void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear)
 {
     list *options = read_data_cfg(datacfg);
@@ -566,7 +567,111 @@ void validate_detector_recall(char *cfgfile, char *weightfile)
         free_image(sized);
     }
 }
+// void extract_feature(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh, char *outfile, int fullscreen)
+// {
+//     // list *options = read_data_cfg(datacfg);
+//     // char *name_list = option_find_str(options, "names", "data/names.list");
+//     // char **names = get_labels(name_list);
 
+//     image **alphabet = load_alphabet();
+//     network *net = load_network(cfgfile, weightfile, 0);
+//     set_batch_network(net, 1);
+//     srand(2222222);
+//     double time;
+//     char buff[256];
+//     char *input = buff;
+//     float nms=.45;
+//     while(1){
+//         if(filename){
+//             strncpy(input, filename, 256);
+//         } else return;
+            
+//         image im = load_image_color(input,0,0);
+//         image sized = letterbox_image(im, net->w, net->h);
+//         //image sized = resize_image(im, net->w, net->h);
+//         //image sized2 = resize_max(im, net->w);
+//         //image sized = crop_image(sized2, -((net->w - sized2.w)/2), -((net->h - sized2.h)/2), net->w, net->h);
+//         //resize_network(net, sized.w, sized.h);
+//         layer l = net->layers[net->n-1]; //the parameter of  the last layer
+
+
+//         float *X = sized.data;
+//         time=what_time_is_it_now();
+//         network_predict(net, X);
+//         printf("%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
+//         int nboxes = 0;
+//         int i = 0;
+//         detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
+
+//         if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+
+//         char name[32] = "neg"; 
+//         char **name_ = (char **)malloc(sizeof(char*)*nboxes);;
+//         for(i = 0;i < nboxes;i++)
+//         {
+//             char* temp = (char*)malloc(32);
+//             name_[i] = temp;   
+//         }
+//         for(i = 0;i < nboxes;i++)
+//         {
+//             if(dets[i].prob[0] > thresh)
+//             {
+
+//                 int x = (dets[i].bbox.x - dets[i].bbox.w/2) * im.w;
+//                 int y = (dets[i].bbox.y - dets[i].bbox.h/2) * im.h;
+//                 int w = dets[i].bbox.w * im.w;
+//                 int h = dets[i].bbox.h * im.h;
+//                 printf("%d %d %d %d %d %d\n", x,y,w,h,sized.w,sized.h);
+//                 image crop_im = crop_image(im,x,y,w,h);
+                
+//                 predict_classifier_("cfg/tt100k_classifier.data","cfg/darknet19_tt100k.cfg","darknet19_tt100k_272.weights",name,crop_im);
+//                 // printf("qqqq%s\n",name);
+//                 strcpy(name_[i], name);       
+//                 // name_[i] = name;
+//                 // printf("tttttt%s\n",name_[i]);
+//                 char temp_name[32] = "11111";
+//                 sprintf(temp_name,"crop_image_%d",i);
+//                 save_image(crop_im,temp_name);
+//                 free_image(crop_im);
+//             }
+//         }
+//         // for(i = 0;i < nboxes;i++)
+//         // {
+//         //     printf("dddddd%s\n",name_[i]);
+//         // }
+//         //printf("%d\n", nboxes);
+//         //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
+//         // if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+//         // draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
+//         draw_detections_(im,dets,nboxes,thresh,name_,alphabet);  
+//         free_detections(dets, nboxes);
+//         for(i = 0;i < nboxes;i++)
+//         {
+//             char* temp = name_[i];
+//             free(temp);            
+//         }
+//         free(name_);
+//         if(outfile){
+//             save_image(im, outfile);
+//         }
+//         else{
+//             save_image(im, "predictions");
+// #ifdef OPENCV
+//             cvNamedWindow("predictions", CV_WINDOW_NORMAL); 
+//             if(fullscreen){
+//                 cvSetWindowProperty("predictions", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+//             }
+//             show_image(im, "predictions");
+//             cvWaitKey(0);
+//             cvDestroyAllWindows();
+// #endif
+//         }
+
+//         free_image(im);
+//         free_image(sized);
+//         if (filename) break;
+//     }
+// }
 
 void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh, char *outfile, int fullscreen)
 {
@@ -611,7 +716,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
 
         if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
 
-        char name[32] = "11111"; 
+        char name[32] = "neg"; 
         char **name_ = (char **)malloc(sizeof(char*)*nboxes);;
         for(i = 0;i < nboxes;i++)
         {
@@ -679,6 +784,174 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
     }
 }
 
+void test_folder(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh, char *outfile, int fullscreen)
+{
+    // list *options = read_data_cfg(datacfg);
+    // char *name_list = option_find_str(options, "names", "data/names.list");
+    // char **names = get_labels(name_list);
+    DIR * dir;
+    struct dirent *direntp; 
+
+    // image **alphabet = load_alphabet();
+    network *net = load_network(cfgfile, weightfile, 0);
+    set_batch_network(net, 1);
+    srand(2222222);
+    double time;
+    // char buff[256];
+    // char txt[256];
+    // char * txt_ = txt;
+    // char *input = buff;
+    // char *input_ = buff;
+    float nms=.45;
+
+    // the classifier
+    net_classifier = load_network("cfg/darknet19_tt100k.cfg","darknet19_tt100k_272.weights",0);
+    set_batch_network(net_classifier, 1);
+    list * options = read_data_cfg("cfg/tt100k_classifier.data");
+    char *name_list = option_find_str(options, "names", 0);
+    if(!name_list) name_list = option_find_str(options, "labels", "data/labels.list");
+    names_classifier = get_labels(name_list);
+    //the classifier end
+
+
+    while(1){
+        char * input = (char *)malloc(sizeof(char) * 256);
+        char * txt_ = (char *)malloc(sizeof(char) * 256);
+        if(filename){
+            strcpy(input, filename);
+        } 
+        dir = opendir(input);
+
+        while ((direntp = readdir(dir)) != NULL)
+        {  
+        printf("file:%s\n", direntp->d_name);
+        if(strcmp(direntp->d_name,".") == 0 || strcmp(direntp->d_name,"..") == 0) continue;
+        // char * image_name = direntp->d_name;
+        // char * image_name = (char*)malloc(sizeof(char) * 32);
+        char image_name[32];
+        char s[32] = "1";
+        strcpy(image_name,direntp->d_name);
+        char * p = strchr(image_name,'.');
+        int n = (int)(p - image_name);
+        // char * s = (char *)malloc(sizeof(char) * 32);
+        
+        // printf("%ld\n", strlen(image_name));
+        printf("%d\n", n);
+        strncpy(s,image_name,n);
+        // free(image_name);
+        
+        char txt[256];
+        // s = strncat(s,".txt",5);
+        printf("%s\n", s);
+        sprintf(txt,"/home/cidi/TT100K/test_label/%s.txt",s);//create label txt file
+        strcpy(txt_,txt);
+        printf("%s\n", txt);
+        FILE *fpWrite=fopen(txt_,"w");  
+        if(fpWrite==NULL)  
+        {  
+            printf("%s\n", "open txt error");
+            return;  
+        }
+        // printf("file:%s\n", direntp->d_name);
+        // printf("%s\n",input);
+        char buff[256];
+        sprintf(buff,"%s%s",input,direntp->d_name);
+        // strcpy(input_,buff);
+        
+        image im = load_image_color(buff,0,0);
+        image sized = letterbox_image(im, net->w, net->h);
+        //image sized = resize_image(im, net->w, net->h);
+        //image sized2 = resize_max(im, net->w);
+        //image sized = crop_image(sized2, -((net->w - sized2.w)/2), -((net->h - sized2.h)/2), net->w, net->h);
+        //resize_network(net, sized.w, sized.h);
+        layer l = net->layers[net->n-1]; //the parameter of  the last layer
+
+
+        float *X = sized.data;
+        time=what_time_is_it_now();
+        network_predict(net, X);
+        printf("%s: Predicted in %f seconds.\n", buff, what_time_is_it_now()-time);
+        int nboxes = 0;
+        int i = 0;
+        detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
+
+        if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+
+        // char name[32] = "neg"; 
+        // char **name_ = (char **)malloc(sizeof(char*)*nboxes);;
+        // for(i = 0;i < nboxes;i++)
+        // {
+        //     char* temp = (char*)malloc(32);
+        //     name_[i] = temp;   
+        // }
+        for(i = 0;i < nboxes;i++)
+        {
+            if(dets[i].prob[0] > thresh)
+            {
+
+                int x = (dets[i].bbox.x - dets[i].bbox.w/2) * im.w;
+                int y = (dets[i].bbox.y - dets[i].bbox.h/2) * im.h;
+                int w = dets[i].bbox.w * im.w;
+                int h = dets[i].bbox.h * im.h;
+                printf("%d %d %d %d %d %d\n", x,y,w,h,sized.w,sized.h);
+                fprintf(fpWrite, "%s %d %d %d %d\n", s,x,y,w,h);
+                // image crop_im = crop_image(im,x,y,w,h);
+                
+                // predict_classifier_demo(net_classifier,names_classifier,name,crop_im);
+                // strcpy(name_[i], name);       
+                // char temp_name[32] = "11111";
+                // sprintf(temp_name,"crop_image_%d",i);
+                // save_image(crop_im,temp_name);
+                // free_image(crop_im);
+            }
+        }
+        fclose(fpWrite);
+        // free(s);
+        
+        // for(i = 0;i < nboxes;i++)
+        // {
+        //     printf("dddddd%s\n",name_[i]);
+        // }
+        //printf("%d\n", nboxes);
+        //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
+        // if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+        // draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
+        // draw_detections_(im,dets,nboxes,thresh,name_,alphabet);  
+        // free_detections(dets, nboxes);
+        // for(i = 0;i < nboxes;i++)
+        // {
+        //     char* temp = name_[i];
+        //     free(temp);            
+        // }
+        // free(name_);
+        // if(outfile){
+        //     save_image(im, outfile);
+        // }
+        // else{
+        //     save_image(im, "predictions");
+// #ifdef OPENCV
+//             cvNamedWindow("predictions", CV_WINDOW_NORMAL); 
+//             if(fullscreen){
+//                 cvSetWindowProperty("predictions", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+//             }
+//             // show_image(im, "predictions");
+//             // cvWaitKey(10);
+//             cvDestroyAllWindows();
+// #endif
+//         }
+
+        free_image(im);
+        free_image(sized);
+        // if (filename) break;
+    }
+    free(txt_);
+    free(input);
+    closedir(dir);
+    break;
+    }
+        
+
+}
 /*
 void censor_detector(char *datacfg, char *cfgfile, char *weightfile, int cam_index, const char *filename, int class, float thresh, int skip)
 {
@@ -904,6 +1177,8 @@ void run_detector(int argc, char **argv)
         char **names = get_labels(name_list);
         demo(cfg, weights, thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
     }
-    //else if(0==strcmp(argv[2], "extract")) extract_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip);
-    //else if(0==strcmp(argv[2], "censor")) censor_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip);
+    else if(0 == strcmp(argv[2],"test_folder")) test_folder(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen);// this function is like test_detector, but for image folder
+    // else if(0==strcmp(argv[2],"feature")) extract_feature(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen); // this function is like "test_detector"
+    // else if(0==strcmp(argv[2], "extract")) extract_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip); 
+    // else if(0==strcmp(argv[2], "censor")) censor_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip);
 }

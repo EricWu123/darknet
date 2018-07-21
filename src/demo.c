@@ -38,6 +38,7 @@ static int demo_done = 0;
 static int demo_total = 0;
 double demo_time;
 int crop_i = 0; // used to count the num of the crop_image:detect_in_thread
+int save_count = 0;
 
 detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num);
 
@@ -162,7 +163,7 @@ void *detect_in_thread(void *ptr)
             image crop_im = crop_image(display,x,y,w,h);
             
             predict_classifier_demo(net_classifier,names_classifier,name,crop_im);
-            printf("qqqq%s\n",name);
+            // printf("qqqq%s\n",name);
 
             strcpy(name_[i], name);       
             // name_[i] = name;
@@ -177,10 +178,10 @@ void *detect_in_thread(void *ptr)
             free_image(crop_im);
         }
     }
-    for(i = 0;i < nboxes;i++)
-    {
-        printf("dddddd%s\n",name_[i]);
-    }
+    // for(i = 0;i < nboxes;i++)
+    // {
+    //     printf("dddddd%s\n",name_[i]);
+    // }
     // cvWaitKey(0);
     // printf("\033[2J");
     // printf("\033[1;1H");
@@ -188,13 +189,17 @@ void *detect_in_thread(void *ptr)
     printf("Objects:\n");
     printf("count:%d\n\n" ,crop_i);
     draw_detections_(display,dets,nboxes,demo_thresh,name_,demo_alphabet);
+    char save_name[32] = "1";
+    sprintf(save_name,"data/save/%d",save_count);
+    save_image(display,save_name);
+    save_count++;
     // image display = buff[(buff_index+2) % 3];
     // draw_detections(display, dets, nboxes, demo_thresh, demo_names, demo_alphabet, demo_classes);
     free_detections(dets, nboxes);
 
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
-    cvWaitKey(0);
+    // cvWaitKey(0);
     // int c = cvWaitKey(10);
     // if(c == 32)
     //   {
@@ -325,6 +330,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
         if(!prefix){
+            printf("%f\n",(what_time_is_it_now() - demo_time));
             fps = 1./(what_time_is_it_now() - demo_time);
             demo_time = what_time_is_it_now();
             display_in_thread(0);

@@ -11,6 +11,8 @@
 #include <unistd.h>  
 
 #define SECRET_NUM -1234
+#define CLASS 98
+#define SAMPLES 5
 extern int gpu_index;
 
 #ifdef GPU
@@ -676,6 +678,7 @@ void rgbgr_weights(layer l);
 image *get_weights(layer l);
 
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int frame_skip, char *prefix, int avg, float hier_thresh, int w, int h, int fps, int fullscreen);
+void demo_metric(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen);
 void get_detection_detections(layer l, int w, int h, float thresh, detection *dets);
 
 char *option_find_str(list *l, char *key, char *def);
@@ -805,4 +808,5 @@ float rand_uniform(float min, float max);
 void predict_classifier_(char *datacfg, char *cfgfile, char *weightfile, char * name,image im);
 void predict_classifier_demo(network * net,char ** names,char *name,image im);
 void predict_classifier_demo_(network * net,image im,float *features);
+int compare_feature(network * net,image im,float features[CLASS * SAMPLES][1024]);
 #endif

@@ -986,7 +986,8 @@ void extract_feature(char *datacfg, char *cfgfile, char *weightfile, char *filen
         char image_name[32];
         char s[32] = "1";
         strcpy(image_name,direntp->d_name);
-        char * p = strchr(image_name,'.');
+        // char * p = strchr(image_name,'.');
+        char * p = strstr(image_name,".jpg");
         int n = (int)(p - image_name);
         strncpy(s,image_name,n); 
         char txt[256];
@@ -1011,10 +1012,10 @@ void extract_feature(char *datacfg, char *cfgfile, char *weightfile, char *filen
         // char name[32] = "neg"; 
         float features[1024] = {0};
         predict_classifier_demo_(net_classifier,im,features);
-        fprintf(fpWrite, "%s ", s);
+        // fprintf(fpWrite, "%s ", s);
         for(int i = 0;i < 1024;i++)
         {
-            fprintf(fpWrite, " %f ", features[i]);
+            fprintf(fpWrite, "%f\n", features[i]);
         }
 
         fprintf(fpWrite, "\n");
@@ -1029,6 +1030,8 @@ void extract_feature(char *datacfg, char *cfgfile, char *weightfile, char *filen
         
 
 }
+
+
 /*
 void censor_detector(char *datacfg, char *cfgfile, char *weightfile, int cam_index, const char *filename, int class, float thresh, int skip)
 {
@@ -1253,6 +1256,13 @@ void run_detector(int argc, char **argv)
         char *name_list = option_find_str(options, "names", "data/names.list");
         char **names = get_labels(name_list);
         demo(cfg, weights, thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
+    }
+    else if(0==strcmp(argv[2], "demo_metric")) {
+        list *options = read_data_cfg(datacfg);
+        int classes = option_find_int(options, "classes", 20);
+        char *name_list = option_find_str(options, "names", "data/names.list");
+        char **names = get_labels(name_list);
+        demo_metric(cfg, weights, thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
     }
     else if(0 == strcmp(argv[2],"test_folder")) test_folder(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen);// this function is like test_detector, but for image folder
     else if(0==strcmp(argv[2],"feature")) extract_feature(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen); // this function is like "test_detector"

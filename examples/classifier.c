@@ -555,6 +555,38 @@ void try_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filena
         if (filename) break;
     }
 }
+int compare_feature(network * net,image im,float features[CLASS * SAMPLES][1024])
+{
+
+    float features_cur[1024] = {0};
+    predict_classifier_demo_(net,im,features_cur);
+
+    float dist[CLASS * SAMPLES] = {0};
+
+    for(int i = 0;i < CLASS * SAMPLES;i++)
+    {
+        float temp = 0.0;
+        for(int j = 0;j < 1024;j++)
+        {
+            temp = pow((features_cur[j] - features[i][j]),2) + temp;
+        }
+        dist[i] = sqrt(temp);
+    }
+    float min = dist[0];
+    int index = 0;
+    for(int i = 1;i < CLASS * SAMPLES;i++)
+    {
+        if(dist[i] < min)
+        {
+            min = dist[i];
+            // printf("i:%d\n",i );
+            index = i / SAMPLES;
+        }
+    }
+    printf("index:%d\n", index);
+    return index;
+}
+
 void predict_classifier_demo_(network * net,image im,float *features)
 {// this function is for extract features
     float * temp = features; 

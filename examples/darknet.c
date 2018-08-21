@@ -416,7 +416,7 @@ int main(int argc, char **argv)
     if(find_arg(argc, argv, "-nogpu")) {
         gpu_index = -1;
     }
-
+    
 #ifndef GPU
     gpu_index = -1;
 #else

@@ -609,7 +609,7 @@ void predict_classifier_demo(network * net,char ** names,char *name,image im)
 {// names is the labels read from the file, but name is predicted label.
     int top = 2;
     int *indexes = calloc(top, sizeof(int));
-    int i = 0;
+    // int i = 0;
     while(1){
         image r = letterbox_image(im, net->w, net->h);
 
@@ -617,12 +617,13 @@ void predict_classifier_demo(network * net,char ** names,char *name,image im)
         float *predictions = network_predict(net, X);
         if(net->hierarchy) hierarchy_predictions(predictions, net->outputs, net->hierarchy, 1, 1);
         top_k(predictions, net->outputs, top, indexes);
-        for(i = 0; i < top; ++i){
-            int index = indexes[i];
-            printf("%5.2f%%: %s\n", predictions[index]*100, names[index]);
-        }
+        // for(i = 0; i < top; ++i){
+        //     int index = indexes[i];
+        //     printf("%5.2f%%: %s\n", predictions[index]*100, names[index]);
+        // }
 
         int temp = indexes[0];
+        printf("%5.2f%%: %s\n", predictions[temp]*100, names[temp]);
         if(predictions[temp] * 100 >= 50) //if the accuracy is bigger than 50%
             strcpy(name, names[temp]);
         // else

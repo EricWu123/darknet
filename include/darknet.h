@@ -9,6 +9,8 @@
 #include <sys/stat.h>  
 #include <dirent.h> 
 #include <unistd.h>  
+#include "map.h"
+
 
 #define SECRET_NUM -1234
 #define CLASS 98
@@ -38,6 +40,7 @@ extern int gpu_index;
     #endif
     #endif
 #endif
+
 
 typedef struct{
     int classes;
@@ -679,6 +682,9 @@ image *get_weights(layer l);
 
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int frame_skip, char *prefix, int avg, float hier_thresh, int w, int h, int fps, int fullscreen);
 void demo_metric(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen);
+void demo_3(char *cfgfile, char *weightfile, char * datacfg_c, char * cfg_c,char * weights_c,
+            float thresh, int cam_index, const char *filename, char **names, int classes, int delay, 
+            char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen);
 void get_detection_detections(layer l, int w, int h, float thresh, detection *dets);
 
 char *option_find_str(list *l, char *key, char *def);
@@ -741,9 +747,11 @@ box_label *read_boxes(char *filename, int *n);
 box float_to_box(float *f, int stride);
 void draw_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes);
 void draw_detections_(image im, detection *dets, int num, float thresh, char **names, image ** alphabet);
+void draw_detections_3(image im, detection *dets, int num, float thresh, char **names, image ** alphabet,int classes);
 
 matrix network_predict_data(network *net, data test);
 image **load_alphabet();
+image **load_alphabet_3();
 image get_network_image(network *net);
 float *network_predict(network *net, float *input);
 

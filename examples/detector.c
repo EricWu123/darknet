@@ -1184,6 +1184,7 @@ void init_map()
     map_set(&label2int,"pr40",339);
     map_set(&label2int,"ps",340);
 
+    map_set(&label2int,"neg",32);
 }
 void run_detector(int argc, char **argv)
 {
@@ -1263,6 +1264,25 @@ void run_detector(int argc, char **argv)
         map_init(&label2int);
         init_map();
         demo_3(cfg, weights, datacfg_c,cfg_c,weights_c,thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
+    }
+    else if(0==strcmp(argv[2], "demo_3_v2")) { // this is for detecting light, sign and lane.the version 2
+        list *options = read_data_cfg(datacfg);
+        int classes = option_find_int(options, "classes", 20);
+        char *name_list = option_find_str(options, "names", "data/names.list");
+        char **names = get_labels(name_list);
+        char datacfg_c[3][256];
+        char cfg_c[3][256];
+        char weights_c[3][256];
+        for(int i = 0;i < 3;++i)
+        {
+            strcpy(datacfg_c[i],argv[6 + 3 * i]);
+            strcpy(cfg_c[i],argv[7 + 3 * i]);
+            strcpy(weights_c[i],argv[8 + 3 * i]);
+        }
+        char *filename = (argc > 15) ? argv[15]: 0;
+        map_init(&label2int);
+        init_map();
+        demo_3_v2(cfg, weights, datacfg_c,cfg_c,weights_c,thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
     }
     else if(0 == strcmp(argv[2],"test_folder")) test_folder(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen);// this function is like test_detector, but for image folder
     else if(0==strcmp(argv[2],"feature")) extract_feature(datacfg, cfg, weights, filename, thresh, hier_thresh, outfile, fullscreen); // this function is like "test_detector", to get 1024-dim features and save to the files.

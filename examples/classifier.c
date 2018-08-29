@@ -396,9 +396,9 @@ void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
         }
         image im = load_image_color(paths[i], 0, 0);
         image crop = center_crop_image(im, net->w, net->h);
-        //show_image(im, "orig");
-        //show_image(crop, "cropped");
-        //cvWaitKey(0);
+        // show_image(im, "orig");
+        // show_image(crop, "cropped");
+        // cvWaitKey(0);
         float *pred = network_predict(net, crop.data);
         if(net->hierarchy) hierarchy_predictions(pred, net->outputs, net->hierarchy, 1, 1);
 
@@ -426,7 +426,7 @@ void validate_classifier_multi(char *datacfg, char *cfg, char *weights)
     list *options = read_data_cfg(datacfg);
 
     char *label_list = option_find_str(options, "labels", "data/labels.list");
-    char *valid_list = option_find_str(options, "valid", "data/train.list");
+    char *valid_list = option_find_str(options, "valid", "data/cla3_test.list");
     int classes = option_find_int(options, "classes", 2);
     int topk = option_find_int(options, "top", 1);
 
@@ -443,7 +443,7 @@ void validate_classifier_multi(char *datacfg, char *cfg, char *weights)
     float avg_acc = 0;
     float avg_topk = 0;
     int *indexes = calloc(topk, sizeof(int));
-
+    // printf("%d",m);
     for(i = 0; i < m; ++i){
         int class = -1;
         char *path = paths[i];
@@ -609,10 +609,14 @@ void predict_classifier_demo(network * net,char ** names,char *name,image im)
 {// names is the labels read from the file, but name is predicted label.
     int top = 2;
     int *indexes = calloc(top, sizeof(int));
+    // extern int crop_ii;
     // int i = 0;
     while(1){
         image r = letterbox_image(im, net->w, net->h);
-
+        // char temp_name[32] = "11111";
+        // sprintf(temp_name,"data/crop/crop_%d",crop_ii);
+        // crop_ii++;
+        // save_image(r,temp_name);
         float *X = r.data;
         float *predictions = network_predict(net, X);
         if(net->hierarchy) hierarchy_predictions(predictions, net->outputs, net->hierarchy, 1, 1);
@@ -794,7 +798,14 @@ void test_classifier(char *datacfg, char *cfgfile, char *weightfile, int target_
     list *options = read_data_cfg(datacfg);
 
     char *test_list = option_find_str(options, "test", "data/test.list");
+    // char *label_list = option_find_str(options, "labels", "data/labels.list");
     int classes = option_find_int(options, "classes", 2);
+    // int tag = option_find_int_quiet(options, "tag", 0);
+
+    // char **labels = 0;
+    // if(!tag){
+    //     labels = get_labels(label_list);
+    // }
 
     list *plist = get_paths(test_list);
 

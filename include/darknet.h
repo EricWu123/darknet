@@ -685,6 +685,9 @@ void demo_metric(char *cfgfile, char *weightfile, float thresh, int cam_index, c
 void demo_3(char *cfgfile, char *weightfile, char * datacfg_c, char * cfg_c,char * weights_c,
             float thresh, int cam_index, const char *filename, char **names, int classes, int delay, 
             char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen);
+void demo_3_v2(char *cfgfile, char *weightfile, char datacfg_c[3][256], char cfg_c[3][256],char weights_c[3][256],
+            float thresh, int cam_index, const char *filename, char **names, int classes, int delay, 
+            char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen);
 void get_detection_detections(layer l, int w, int h, float thresh, detection *dets);
 
 char *option_find_str(list *l, char *key, char *def);

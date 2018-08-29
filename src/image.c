@@ -136,6 +136,7 @@ image get_label_(image **characters, char *string, int size)
     int flag = 0;
     if(size > 7) size = 7;
     image label = make_empty_image(0,0,0);
+    // printf("sring:%s\n",string);
     int *val = map_get(&label2int, string);
     if (val) {
     //printf("value: %d\n", *val);
@@ -276,7 +277,7 @@ image **load_alphabet_3()
         alphabets[j] = calloc(512, sizeof(image));
         for(i = 0; i < 400; ++i){
             extern map_int_t label2int; 
-            char * key = get_key_by_value(&label2int,i);
+            const char * key = get_key_by_value(&label2int,i);
             if(key == NULL)
                 continue;
             char buff[256];
@@ -295,68 +296,78 @@ void draw_detections_3(image im, detection *dets, int num, float thresh, char **
     for(i = 0;i < num;++i)
     {
         char labelstr[256] = {0};
-        for(j = 0;j < classes;++j)
+        float prob_max = dets[i].prob[0];
+        int index = 0;
+        for(int c = 1; c < classes; ++c)
         {
-            if(dets[i].prob[j] > thresh)
-            {
-                strcpy(labelstr,names[i]);
-                int width = im.h * .001;
-                class = j;
-                count++; // use for draw label position
-                /*
-                if(0){
-                width = pow(prob, 1./2.)*10+1;
-                alphabet = 0;
-                }
-                */
+          if(dets[i].prob[c] > prob_max)
+          {
+            prob_max = dets[i].prob[c];
+            index = c;
+          }
+        }
+        j = index;
+        // for(j = 0;j < classes;++j)
+        // {
+        if(dets[i].prob[j] > thresh)
+        {
+            strcpy(labelstr,names[i]);
+            int width = im.h * .001;
+            class = j;
+            count++; // use for draw label position
+            /*
+            if(0){
+            width = pow(prob, 1./2.)*10+1;
+            alphabet = 0;
+            }
+            */
 
-                //printf("%d %s: %.0f%%\n", i, names[class], prob*100);
-                int offset = class*123457 % classes;
-                float red = get_color(2,offset,classes);
-                float green = get_color(1,offset,classes);
-                float blue = get_color(0,offset,classes);
-                float rgb[3];
+            //printf("%d %s: %.0f%%\n", i, names[class], prob*100);
+            int offset = class*123457 % classes;
+            float red = get_color(2,offset,classes);
+            float green = get_color(1,offset,classes);
+            float blue = get_color(0,offset,classes);
+            float rgb[3];
 
-                //width = prob*20+2;
+            //width = prob*20+2;
 
-                rgb[0] = red;
-                rgb[1] = green;
-                rgb[2] = blue;
-                box b = dets[i].bbox;
-                //printf("%f %f %f %f\n", b.x, b.y, b.w, b.h);
+            rgb[0] = red;
+            rgb[1] = green;
+            rgb[2] = blue;
+            box b = dets[i].bbox;
+            //printf("%f %f %f %f\n", b.x, b.y, b.w, b.h);
 
-                int left  = (b.x-b.w/2.)*im.w;
-                int right = (b.x+b.w/2.)*im.w;
-                int top   = (b.y-b.h/2.)*im.h;
-                int bot   = (b.y+b.h/2.)*im.h;
-                
-                if(left < 0) left = 0;
-                if(right > im.w-1) right = im.w-1;
-                if(top < 0) top = 0;
-                if(bot > im.h-1) bot = im.h-1;
+            int left  = (b.x-b.w/2.)*im.w;
+            int right = (b.x+b.w/2.)*im.w;
+            int top   = (b.y-b.h/2.)*im.h;
+            int bot   = (b.y+b.h/2.)*im.h;
+            
+            if(left < 0) left = 0;
+            if(right > im.w-1) right = im.w-1;
+            if(top < 0) top = 0;
+            if(bot > im.h-1) bot = im.h-1;
 
-                draw_box_width(im, left, top, right, bot, width, red, green, blue);
-                if (alphabet) {
-                    image label = get_label_(alphabet, labelstr, 0); 
-                    image label_re = resize_image(label,b.w*im.w,b.h*im.h);
-                    // printf("pos:%d %d\n",count * label.w + 1,im.h - label.h - 1);               
-                    //draw_label(im, im.h - 1, count * label.w + 1,label, rgb);
-                    //标签超出了图像的范围也没关系，set_pixel有容错的判断。
-                    draw_label(im, bot, right,label_re, rgb);
-                    free_image(label);
-                    free_image(label_re);
-                }
-                if (dets[i].mask){
-                    image mask = float_to_image(14, 14, 1, dets[i].mask);
-                    image resized_mask = resize_image(mask, b.w*im.w, b.h*im.h);
-                    image tmask = threshold_image(resized_mask, .5);
-                    embed_image(tmask, im, left, top);
-                    free_image(mask);
-                    free_image(resized_mask);
-                    free_image(tmask);
-                }
+            draw_box_width(im, left, top, right, bot, width, red, green, blue);
+            if (alphabet) {
+                image label = get_label_(alphabet, labelstr, 0); 
+                image label_re = resize_image(label,b.w*im.w,b.h*im.h);
+                // printf("pos:%d %d\n",count * label.w + 1,im.h - label.h - 1);               
+                //draw_label(im, im.h - 1, count * label.w + 1,label, rgb);
+                draw_label(im, bot, right,label_re, rgb);
+                free_image(label);
+                free_image(label_re);
+            }
+            if (dets[i].mask){
+                image mask = float_to_image(14, 14, 1, dets[i].mask);
+                image resized_mask = resize_image(mask, b.w*im.w, b.h*im.h);
+                image tmask = threshold_image(resized_mask, .5);
+                embed_image(tmask, im, left, top);
+                free_image(mask);
+                free_image(resized_mask);
+                free_image(tmask);
             }
         }
+        // }
     }
 }
 

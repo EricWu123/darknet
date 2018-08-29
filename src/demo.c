@@ -15,18 +15,20 @@
 
 static char **demo_names;
 static char **names_classifier;
+static char **names_classifier_v2[3];//for demo_3_v2
 static image **demo_alphabet;
 static int demo_classes;
 
 static network *net;
 static network * net_classifier;
+static network * net_classifier_v2[3];
 static image buff [3];
 static image buff_letter[3];
 static int buff_index = 0;
 static CvCapture * cap;
 static IplImage  * ipl;
 static float fps = 0;
-static float demo_thresh = 0;
+static float demo_thresh = 0.5;
 static float demo_hier = .5;
 static int running = 0;
 
@@ -42,6 +44,7 @@ int crop_i = 0; // used to count the num of the crop_image:detect_in_thread
 int save_count = 0;
 char names_m[CLASS][32]; // for save labels
 float features[CLASS * SAMPLES][1024]; //for save features of samples
+// int crop_ii = 0;
 
 detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num);
 
@@ -365,6 +368,110 @@ void *detect_in_thread_3(void *ptr) // detect light, sign, and lane
     running = 0;
     return 0;
 }
+
+void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
+{
+    running = 1;
+    float nms = .35;
+
+    layer l = net->layers[net->n-1];
+    image display = buff[(buff_index+2) % 3];
+    float *X = buff_letter[(buff_index+2)%3].data;
+    network_predict(net, X);
+
+    detection *dets = 0;
+    int nboxes = 0;
+    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes); 
+
+    if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
+
+    char name[32] = "neg"; 
+    int i = 0;
+    // char **name_ = (char **)malloc(sizeof(char*)*nboxes);//the boxes categories name
+    // for(i = 0;i < nboxes;i++)
+    // {
+    //     char* temp = (char*)malloc(32);
+    //     name_[i] = temp;   
+    // }
+    char **name_ = (char **)calloc(nboxes,sizeof(char*));//the boxes categories name
+    for(i = 0;i < nboxes;i++)
+    {
+        char* temp = (char*)calloc(32,sizeof(char));
+        name_[i] = temp;   
+    }
+    demo_thresh = .45;
+    for(i = 0;i < nboxes;i++)
+    {
+        float prob_max = dets[i].prob[0];
+        int index = 0;
+        for(int c = 1; c < l.classes; ++c)
+        {
+          if(dets[i].prob[c] > prob_max)
+          {
+            prob_max = dets[i].prob[c];
+            index = c;
+          }
+        }
+        // printf("index:%d %f\n", index,dets[i].prob[index]);
+        if(dets[i].prob[index] > demo_thresh)
+        {
+          int j = index;
+          // int x = (dets[i].bbox.x - dets[i].bbox.w/2) * sized.w;
+          // int y = (dets[i].bbox.y - dets[i].bbox.h/2) * sized.h;
+          // int w = dets[i].bbox.w * sized.w;
+          // int h = dets[i].bbox.h * sized.h;
+
+
+          // !!you must make sure the ratio of sized'height and sized'weight is the same as the ratio of the display(original).
+          int x = (dets[i].bbox.x - dets[i].bbox.w/2) * display.w;
+          int y = (dets[i].bbox.y - dets[i].bbox.h/2) * display.h;
+          int w = dets[i].bbox.w * display.w;
+          int h = dets[i].bbox.h * display.h;
+          if(x < 0) x = 0;
+          if(w > display.w-1) w = display.w-1;
+          if(y < 0) y = 0;
+          if(h > display.h-1) h = display.h-1;
+          //printf("%d %d %d %d %d %d\n", x,y,w,h,display.w,display.h);
+          image crop_im = crop_image(display,x,y,w,h);   
+          predict_classifier_demo(net_classifier_v2[j],names_classifier_v2[j],name,crop_im);
+          // printf("name:%s\n",name);
+          strcpy(name_[i], name);
+
+
+          /*******save the crop imgae *******/      
+          char temp_name[32] = "11111";
+          sprintf(temp_name,"data/crop/crop_image_%d",crop_i);
+          crop_i++;
+          save_image(crop_im,temp_name);
+          free_image(crop_im);
+        }       
+    }
+    // for(i = 0;i < nboxes;i++)
+    // {
+    //     printf("name_:%s\n",name_[i]);
+    // }
+
+    // printf("\033[2J");
+    // printf("\033[1;1H");
+    printf("FPS:%.1f\n",fps);
+    //printf("Objects:\n");
+    //printf("count:%d\n\n" ,crop_i);
+
+    draw_detections_3(display,dets,nboxes,demo_thresh,name_,demo_alphabet,l.classes);
+
+    /**** save the images the have detect rectangles****/
+    // char save_name[32] = "1";
+    // sprintf(save_name,"data/save/%d",save_count);
+    // save_image(display,save_name);
+    // save_count++;
+
+    // cvWaitKey(0);
+    free_detections(dets, nboxes);
+    demo_index = (demo_index + 1)%demo_frame;
+    running = 0;
+    return 0;
+}
+
 
 void *fetch_in_thread(void *ptr)
 {
@@ -714,6 +821,105 @@ void demo_3(char *cfgfile, char *weightfile, char * datacfg_c, char * cfg_c,char
         buff_index = (buff_index + 1) %3;
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread_3, 0)) error("Thread creation failed");
+        if(!prefix){
+            printf("time:%f\n",(what_time_is_it_now() - demo_time));
+            fps = 1./(what_time_is_it_now() - demo_time);
+            demo_time = what_time_is_it_now();
+            display_in_thread(0);
+        }else{
+            char name[256];
+            sprintf(name, "%s_%08d", prefix, count);
+            save_image(buff[(buff_index + 1)%3], name);
+        }
+        pthread_join(fetch_thread, 0);
+        pthread_join(detect_thread, 0);
+        ++count;
+    }
+}
+
+void demo_3_v2(char *cfgfile, char *weightfile, char datacfg_c[3][256], char cfg_c[3][256],char weights_c[3][256],
+            float thresh, int cam_index, const char *filename, char **names, int classes, int delay, 
+            char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
+{
+    //demo_frame = avg_frames;
+    image **alphabet = load_alphabet_3();
+    demo_names = names;
+    demo_alphabet = alphabet;
+    demo_classes = classes;
+    demo_thresh = thresh;
+    demo_hier = hier;
+    printf("Demo\n");
+    net = load_network(cfgfile, weightfile, 0);
+    set_batch_network(net, 1);
+    pthread_t detect_thread;
+    pthread_t fetch_thread;
+
+    srand(2222222);
+    // the classifier
+    for(int i = 0;i < 3;++i)
+    {
+        net_classifier_v2[i] = load_network(cfg_c[i],weights_c[i],0);
+        // printf("%s %s %s\n",cfg_c[i],weights_c[i],datacfg_c[i]);
+        set_batch_network(net_classifier_v2[i], 1);
+        list * options = read_data_cfg(datacfg_c[i]);
+        char *name_list = option_find_str(options, "names", 0);
+        if(!name_list) name_list = option_find_str(options, "labels", "data/labels.list");
+        names_classifier_v2[i] = get_labels(name_list);
+    }
+    //the classifier end
+
+    int i;
+    demo_total = size_network(net);
+    predictions = calloc(demo_frame, sizeof(float*));
+    for (i = 0; i < demo_frame; ++i){
+        predictions[i] = calloc(demo_total, sizeof(float));
+    }
+    avg = calloc(demo_total, sizeof(float));
+
+    if(filename){
+        printf("video file: %s\n", filename);
+        cap = cvCaptureFromFile(filename);
+    }else{
+        cap = cvCaptureFromCAM(cam_index);
+
+        if(w){
+            cvSetCaptureProperty(cap, CV_CAP_PROP_FRAME_WIDTH, w);
+        }
+        if(h){
+            cvSetCaptureProperty(cap, CV_CAP_PROP_FRAME_HEIGHT, h);
+        }
+        if(frames){
+            cvSetCaptureProperty(cap, CV_CAP_PROP_FPS, frames);
+        }
+    }
+
+    if(!cap) error("Couldn't connect to webcam.\n");
+
+    buff[0] = get_image_from_stream(cap);
+    buff[1] = copy_image(buff[0]);
+    buff[2] = copy_image(buff[0]);
+    buff_letter[0] = letterbox_image(buff[0], net->w, net->h);
+    buff_letter[1] = letterbox_image(buff[0], net->w, net->h);
+    buff_letter[2] = letterbox_image(buff[0], net->w, net->h);
+    ipl = cvCreateImage(cvSize(buff[0].w,buff[0].h), IPL_DEPTH_8U, buff[0].c);
+
+    int count = 0;
+    if(!prefix){
+        cvNamedWindow("Demo", CV_WINDOW_NORMAL); 
+        if(fullscreen){
+            cvSetWindowProperty("Demo", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+        } else {
+            cvMoveWindow("Demo", 0, 0);
+            cvResizeWindow("Demo", 1352, 1013);
+        }
+    }
+
+    demo_time = what_time_is_it_now();
+
+    while(!demo_done){
+        buff_index = (buff_index + 1) %3;
+        if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
+        if(pthread_create(&detect_thread, 0, detect_in_thread_3_v2, 0)) error("Thread creation failed");
         if(!prefix){
             printf("time:%f\n",(what_time_is_it_now() - demo_time));
             fps = 1./(what_time_is_it_now() - demo_time);

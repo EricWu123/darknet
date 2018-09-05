@@ -562,6 +562,7 @@ typedef struct load_args{
     char **labels;
     int h;
     int w;
+    int c; // color depth
     int out_w;
     int out_h;
     int nh;
@@ -702,7 +703,7 @@ void load_weights_upto(network *net, char *filename, int start, int cutoff);
 
 void zero_objectness(layer l);
 void get_region_detections(layer l, int w, int h, int netw, int neth, float thresh, int *map, float tree_thresh, int relative, detection *dets);
-int get_yolo_detections(layer l, int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets);
+int get_yolo_detections(layer l, int w, int h, int netw, int neth, float thresh, int *map, int relative, detection *dets,int letter);
 void free_network(network *net);
 void set_batch_network(network *net, int b);
 void set_temp_network(network *net, float t);
@@ -750,7 +751,7 @@ box_label *read_boxes(char *filename, int *n);
 box float_to_box(float *f, int stride);
 void draw_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes);
 void draw_detections_(image im, detection *dets, int num, float thresh, char **names, image ** alphabet);
-void draw_detections_3(image im, detection *dets, int num, float thresh, char **names, image ** alphabet,int classes);
+void draw_detections_3(image im, detection *dets, int num, float thresh, char **names, image ** alphabet,image ** alphabet_c,int classes,float *confidence_c);
 
 matrix network_predict_data(network *net, data test);
 image **load_alphabet();
@@ -762,7 +763,7 @@ int network_width(network *net);
 int network_height(network *net);
 float *network_predict_image(network *net, image im);
 void network_detect(network *net, image im, float thresh, float hier_thresh, float nms, detection *dets);
-detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num);
+detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num,int letter);
 void free_detections(detection *dets, int n);
 
 void reset_network_state(network *net, int b);
@@ -817,7 +818,7 @@ size_t rand_size_t();
 float rand_normal();
 float rand_uniform(float min, float max);
 void predict_classifier_(char *datacfg, char *cfgfile, char *weightfile, char * name,image im);
-void predict_classifier_demo(network * net,char ** names,char *name,image im);
+void predict_classifier_demo(network * net,char ** names,char *name,image im,float * confidence_tmp);
 void predict_classifier_demo_(network * net,image im,float *features);
 int compare_feature(network * net,image im,float features[CLASS * SAMPLES][1024]);
 #endif

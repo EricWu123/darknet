@@ -16,7 +16,8 @@
 static char **demo_names;
 static char **names_classifier;
 static char **names_classifier_v2[3];//for demo_3_v2
-static image **demo_alphabet;
+static image **demo_alphabet;//新的图片标签
+static image **demo_alphabet_c; // 原来的字母标签
 static int demo_classes;
 
 static network *net;
@@ -46,7 +47,7 @@ char names_m[CLASS][32]; // for save labels
 float features[CLASS * SAMPLES][1024]; //for save features of samples
 // int crop_ii = 0;
 
-detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num);
+detection *get_network_boxes(network *net, int w, int h, float thresh, float hier, int *map, int relative, int *num,int letter);
 
 int size_network(network *net)
 {
@@ -89,7 +90,7 @@ detection *avg_predictions(network *net, int *nboxes)
             count += l.outputs;
         }
     }
-    detection *dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, nboxes);
+    detection *dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, nboxes,1);
     return dets;
 }
 
@@ -112,7 +113,7 @@ void *detect_in_thread(void *ptr)
     detection *dets = 0;
     int nboxes = 0;
     // dets = avg_predictions(net, &nboxes);
-    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes);
+    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes,1);
     //save video failed!!TAT
     // char  video_name[32] = "./data/sign.avi";
     // CvSize video_size  = cvSize(display.w,display.h);
@@ -168,7 +169,7 @@ void *detect_in_thread(void *ptr)
             printf("%d %d %d %d %d %d\n", x,y,w,h,display.w,display.h);
             image crop_im = crop_image(display,x,y,w,h);
             
-            predict_classifier_demo(net_classifier,names_classifier,name,crop_im);
+            predict_classifier_demo(net_classifier,names_classifier,name,crop_im,(float *)0);
             // printf("qqqq%s\n",name);
 
             strcpy(name_[i], name);       
@@ -227,7 +228,7 @@ void *detect_in_thread_metric(void *ptr)
 
     detection *dets = 0;
     int nboxes = 0;
-    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes);
+    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes,1);
 
     if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
 
@@ -250,7 +251,7 @@ void *detect_in_thread_metric(void *ptr)
             printf("%d %d %d %d %d %d\n", x,y,w,h,display.w,display.h);
             image crop_im = crop_image(display,x,y,w,h);
             
-            // predict_classifier_demo(net_classifier,names_classifier,name,crop_im);
+            predict_classifier_demo(net_classifier,names_classifier,name,crop_im,(float *)0);
             int index = compare_feature(net_classifier,crop_im,features);
             strcpy(name,names_m[index]);
             printf("label:%s\n", name);
@@ -293,7 +294,7 @@ void *detect_in_thread_3(void *ptr) // detect light, sign, and lane
 
     detection *dets = 0;
     int nboxes = 0;
-    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes); 
+    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes,1); 
 
     if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
 
@@ -328,8 +329,8 @@ void *detect_in_thread_3(void *ptr) // detect light, sign, and lane
                 if(y < 0) y = 0;
                 if(h > display.h-1) h = display.h-1;
                 //printf("%d %d %d %d %d %d\n", x,y,w,h,display.w,display.h);
-                image crop_im = crop_image(display,x,y,w,h);   
-                predict_classifier_demo(net_classifier,names_classifier,name,crop_im);
+                // image crop_im = crop_image(display,x,y,w,h);   
+                // predict_classifier_demo(net_classifier,names_classifier,name,crop_im);
                 // printf("qqqq%s\n",name);
                 strcpy(name_[i], name);
 
@@ -354,7 +355,7 @@ void *detect_in_thread_3(void *ptr) // detect light, sign, and lane
     //printf("Objects:\n");
     //printf("count:%d\n\n" ,crop_i);
 
-    draw_detections_3(display,dets,nboxes,demo_thresh,name_,demo_alphabet,l.classes);
+    // draw_detections_3(display,dets,nboxes,demo_thresh,name_,demo_alphabet,l.classes);
 
     /**** save the images the have detect rectangles****/
     // char save_name[32] = "1";
@@ -381,11 +382,11 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
 
     detection *dets = 0;
     int nboxes = 0;
-    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes); 
+    dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, &nboxes,1); 
 
     if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
 
-    char name[32] = "neg"; 
+    
     int i = 0;
     // char **name_ = (char **)malloc(sizeof(char*)*nboxes);//the boxes categories name
     // for(i = 0;i < nboxes;i++)
@@ -399,7 +400,15 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
         char* temp = (char*)calloc(32,sizeof(char));
         name_[i] = temp;   
     }
-    demo_thresh = .45;
+    int nboxes_tmp = 1;
+    if(nboxes > 0 )
+        nboxes_tmp = nboxes;
+    float confidence_c[nboxes_tmp];
+    for(i = 0;i < nboxes_tmp;++i)
+    {
+        confidence_c[i] = 0.;
+    }   
+    demo_thresh = 0.2;
     for(i = 0;i < nboxes;i++)
     {
         float prob_max = dets[i].prob[0];
@@ -415,6 +424,8 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
         // printf("index:%d %f\n", index,dets[i].prob[index]);
         if(dets[i].prob[index] > demo_thresh)
         {
+          char name[32] = "neg";
+          float * confidence_tmp = (float *)calloc(1,sizeof(float));
           int j = index;
           // int x = (dets[i].bbox.x - dets[i].bbox.w/2) * sized.w;
           // int y = (dets[i].bbox.y - dets[i].bbox.h/2) * sized.h;
@@ -433,18 +444,25 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
           if(h > display.h-1) h = display.h-1;
           //printf("%d %d %d %d %d %d\n", x,y,w,h,display.w,display.h);
           image crop_im = crop_image(display,x,y,w,h);   
-          predict_classifier_demo(net_classifier_v2[j],names_classifier_v2[j],name,crop_im);
+          predict_classifier_demo(net_classifier_v2[j],names_classifier_v2[j],name,crop_im,confidence_tmp);
           // printf("name:%s\n",name);
           strcpy(name_[i], name);
+          if(confidence_tmp != NULL)
+            confidence_c[i] = *confidence_tmp;
+          free(confidence_tmp);
 
 
           /*******save the crop imgae *******/      
-          char temp_name[32] = "11111";
-          sprintf(temp_name,"data/crop/crop_image_%d",crop_i);
-          crop_i++;
-          save_image(crop_im,temp_name);
-          free_image(crop_im);
+        //   char temp_name[32] = "11111";
+        //   sprintf(temp_name,"data/crop/crop_image_%d",crop_i);
+        //   crop_i++;
+        //   save_image(crop_im,temp_name);
+        //   free_image(crop_im);
         }       
+    }
+    for(i = 0;i < nboxes_tmp;++i)
+    {
+        printf("%f\n",confidence_c[i]);
     }
     // for(i = 0;i < nboxes;i++)
     // {
@@ -457,16 +475,21 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
     //printf("Objects:\n");
     //printf("count:%d\n\n" ,crop_i);
 
-    draw_detections_3(display,dets,nboxes,demo_thresh,name_,demo_alphabet,l.classes);
+    draw_detections_3(display,dets,nboxes,demo_thresh,name_,demo_alphabet,demo_alphabet_c,l.classes,confidence_c);
 
     /**** save the images the have detect rectangles****/
-    // char save_name[32] = "1";
-    // sprintf(save_name,"data/save/%d",save_count);
-    // save_image(display,save_name);
-    // save_count++;
+    char save_name[32] = "1";
+    sprintf(save_name,"data/save/14000/%d",save_count);
+    save_image(display,save_name);
+    save_count++;
 
     // cvWaitKey(0);
     free_detections(dets, nboxes);
+    for(i = 0;i < nboxes;i++)
+    {
+        free(name_[i]);
+    }
+    free(name_);
     demo_index = (demo_index + 1)%demo_frame;
     running = 0;
     return 0;
@@ -842,9 +865,11 @@ void demo_3_v2(char *cfgfile, char *weightfile, char datacfg_c[3][256], char cfg
             char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
 {
     //demo_frame = avg_frames;
+    image **alphabet_c = load_alphabet();
     image **alphabet = load_alphabet_3();
     demo_names = names;
     demo_alphabet = alphabet;
+    demo_alphabet_c = alphabet_c;
     demo_classes = classes;
     demo_thresh = thresh;
     demo_hier = hier;

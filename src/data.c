@@ -112,21 +112,22 @@ matrix load_image_augment_paths(char **paths, int n, int min, int max, int size,
 
     for(i = 0; i < n; ++i){
         image im = load_image_color(paths[i], 0, 0);
-        image crop;
-        if(center){
-            crop = center_crop_image(im, size, size);
-        } else {
-            crop = random_augment_image(im, angle, aspect, min, max, size, size);
-        }
+        image crop = letterbox_image(im,size,size);
+        // image crop;
+        // if(center){
+        //     crop = center_crop_image(im, size, size);
+        // } else {
+        //     crop = random_augment_image(im, angle, aspect, min, max, size, size);
+        // }
         int flip = rand()%2;
         if (flip) flip_image(crop);
         random_distort_image(crop, hue, saturation, exposure);
 
-        /*
-        show_image(im, "orig");
-        show_image(crop, "crop");
-        cvWaitKey(0);
-        */
+        
+        // show_image(im, "orig");
+        // show_image(crop, "crop");
+        // cvWaitKey(0);
+        
         free_image(im);
         X.vals[i] = crop.data;
         X.cols = crop.h*crop.w*crop.c;
@@ -976,6 +977,9 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int boxes, in
     d.y = make_matrix(n, 5*boxes);
     for(i = 0; i < n; ++i){
         image orig = load_image_color(random_paths[i], 0, 0);
+        // orig = letterbox_image(orig,w,h);
+        // w = orig.w;
+        // h = orig.h;
         image sized = make_image(w, h, orig.c);
         fill_image(sized, .5);
 
@@ -983,7 +987,7 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int boxes, in
         float dh = jitter * orig.h;
 
         float new_ar = (orig.w + rand_uniform(-dw, dw)) / (orig.h + rand_uniform(-dh, dh));
-        float scale = rand_uniform(.25, 2);
+        float scale = rand_uniform(.5, 2);
 
         float nw, nh;
 
@@ -999,13 +1003,17 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int boxes, in
         float dy = rand_uniform(0, h - nh);
 
         place_image(orig, nw, nh, dx, dy, sized);
-
+        // show_image(sized, "sized0");
         random_distort_image(sized, hue, saturation, exposure);
-
+    
         int flip = rand()%2;
         if(flip) flip_image(sized);
         d.X.vals[i] = sized.data;
-
+        // printf("width:%d %d %f\n",sized.w,sized.h,scale);
+        // show_image(orig, "orig");
+        // show_image(letter, "letter");
+        // show_image(sized, "sized");
+        // cvWaitKey(0);
 
         fill_truth_detection(random_paths[i], boxes, d.y.vals[i], classes, flip, -dx/w, -dy/h, nw/w, nh/h);
 

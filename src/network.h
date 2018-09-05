@@ -26,4 +26,5 @@ int resize_network(network *net, int w, int h);
 void calc_network_cost(network *net);
 
 #endif
+void fuse_conv_batchnorm(network net);
 

@@ -395,7 +395,7 @@ void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
             }
         }
         image im = load_image_color(paths[i], 0, 0);
-        image crop = center_crop_image(im, net->w, net->h);
+        image crop = letterbox_image(im, net->w, net->h);
         // show_image(im, "orig");
         // show_image(crop, "cropped");
         // cvWaitKey(0);
@@ -605,7 +605,7 @@ void predict_classifier_demo_(network * net,image im,float *features)
         break;
     } 
 }
-void predict_classifier_demo(network * net,char ** names,char *name,image im)
+void predict_classifier_demo(network * net,char ** names,char *name,image im,float * confidence_tmp)
 {// names is the labels read from the file, but name is predicted label.
     int top = 2;
     int *indexes = calloc(top, sizeof(int));
@@ -628,8 +628,10 @@ void predict_classifier_demo(network * net,char ** names,char *name,image im)
 
         int temp = indexes[0];
         printf("%5.2f%%: %s\n", predictions[temp]*100, names[temp]);
-        if(predictions[temp] * 100 >= 50) //if the accuracy is bigger than 50%
-            strcpy(name, names[temp]);
+        // if(predictions[temp] * 100 >= 0) //if the accuracy is bigger than 50%
+        strcpy(name, names[temp]);
+        *confidence_tmp = predictions[temp];
+
         // else
         //     strcpy(name, "FAKE");
             // name = NULL;

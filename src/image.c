@@ -129,36 +129,31 @@ image tile_images(image a, image b, int dx)
     return c;
 }
 
-image get_label_(image **characters, char *string, int size)
+image get_label_(image **characters, char *string)
 {
     extern map_int_t label2int;
-    size = size/10;
-    int flag = 0;
-    if(size > 7) size = 7;
     image label = make_empty_image(0,0,0);
-    // printf("sring:%s\n",string);
     int *val = map_get(&label2int, string);
-    if (val) {
-    //printf("value: %d\n", *val);
-    } else {
-    val = (int *)calloc(1,sizeof(int));
-    *val = 32;
-    flag = 1;
-    //printf("value not found\n");
+    int flag = 0;
+    if (!val)
+    {
+        val = (int *)calloc(1,sizeof(int));
+        *val = 32;
+        flag = 1;
     }
-    image l = characters[size][*val];
+    image l = characters[0][*val];
     if(flag == 1)
     {
         free(val);
         flag = 0;
     }   
-    image n = tile_images(label, l, -size - 1 + (size+1)/2);
+    image n = tile_images(label, l, 0);
     free_image(label);
     label = n;
-    ++string;
-    image b = border_image(label, label.h*.25);
-    free_image(label);
-    return b;
+    // image b = border_image(label, label.h*.1);
+    // free_image(label);
+    // show_image(label, "orig");
+    return label;
 }
 
 image get_label(image **characters, char *string, int size)
@@ -288,7 +283,7 @@ image **load_alphabet_3()
     return alphabets;
 }
 
-void draw_detections_3(image im, detection *dets, int num, float thresh, char **names, image ** alphabet,int classes)
+void draw_detections_3(image im, detection *dets, int num, float thresh, char **names, image ** alphabet,image ** alphabet_c,int classes,float *confidence_c)
 {
     int i,j;
     int class = 0;
@@ -349,13 +344,41 @@ void draw_detections_3(image im, detection *dets, int num, float thresh, char **
 
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
-                image label = get_label_(alphabet, labelstr, 0); 
+                image label = get_label_(alphabet, labelstr); 
                 image label_re = resize_image(label,b.w*im.w,b.h*im.h);
                 // printf("pos:%d %d\n",count * label.w + 1,im.h - label.h - 1);               
                 //draw_label(im, im.h - 1, count * label.w + 1,label, rgb);
                 draw_label(im, bot, right,label_re, rgb);
                 free_image(label);
                 free_image(label_re);
+            }
+            if(alphabet_c)
+            {
+                char confidence[32] = {0}; 
+                gcvt(dets[i].prob[j],4,confidence);
+                // strcpy(confidence,gcvt(dets[i].prob[j]));
+                // printf("confidence:%s",confidence);
+                image label = get_label(alphabet_c, confidence, (im.h*.01));
+                float ratio_w = label.w /(b.w * im.w);
+                if(ratio_w > 0.5)
+                    ratio_w = 0.5;
+                else
+                    ratio_w = 1;
+                image label_tmp = resize_image(label,label.w * ratio_w,label.h * ratio_w);
+                draw_label(im, top +width, left, label_tmp, rgb);
+                // free_image(label);
+                char confidence1[32] = {0}; 
+                gcvt(confidence_c[i],4,confidence1);
+                label = get_label(alphabet_c, confidence1, (im.h*.01));
+                ratio_w = label.w /(b.w * im.w);
+                if(ratio_w > 0.5)
+                    ratio_w = 0.5;
+                else
+                    ratio_w = 1;
+                label_tmp = resize_image(label,label.w * ratio_w,label.h * ratio_w);
+                draw_label(im, bot + width, right+width, label_tmp, rgb);
+                free_image(label);
+                free_image(label_tmp);
             }
             if (dets[i].mask){
                 image mask = float_to_image(14, 14, 1, dets[i].mask);
@@ -507,7 +530,78 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
         }
     }
 }
+#ifdef OPENCV
 
+IplImage* draw_train_chart(float max_img_loss, int max_batches, int number_of_lines, int img_size)
+{
+	int img_offset = 50;
+	int draw_size = img_size - img_offset;
+	IplImage* img = cvCreateImage(cvSize(img_size, img_size), 8, 3);
+	cvSet(img, CV_RGB(255, 255, 255), 0);
+	CvPoint pt1, pt2, pt_text;
+	CvFont font;
+	cvInitFont(&font, CV_FONT_HERSHEY_COMPLEX_SMALL, 0.7, 0.7, 0, 1, CV_AA);
+	char char_buff[100];
+	int i;
+	// vertical lines
+	pt1.x = img_offset; pt2.x = img_size, pt_text.x = 10;
+	for (i = 1; i <= number_of_lines; ++i) {
+		pt1.y = pt2.y = (float)i * draw_size / number_of_lines;
+		cvLine(img, pt1, pt2, CV_RGB(224, 224, 224), 1, 8, 0);
+		if (i % 10 == 0) {
+			sprintf(char_buff, "%2.1f", max_img_loss*(number_of_lines - i) / number_of_lines);
+			pt_text.y = pt1.y + 5;
+			cvPutText(img, char_buff, pt_text, &font, CV_RGB(0, 0, 0));
+			cvLine(img, pt1, pt2, CV_RGB(128, 128, 128), 1, 8, 0);
+		}
+	}
+	// horizontal lines
+	pt1.y = draw_size; pt2.y = 0, pt_text.y = draw_size + 15;
+	for (i = 0; i <= number_of_lines; ++i) {
+		pt1.x = pt2.x = img_offset + (float)i * draw_size / number_of_lines;
+		cvLine(img, pt1, pt2, CV_RGB(224, 224, 224), 1, 8, 0);
+		if (i % 10 == 0) {
+			sprintf(char_buff, "%d", max_batches * i / number_of_lines);
+			pt_text.x = pt1.x - 20;
+			cvPutText(img, char_buff, pt_text, &font, CV_RGB(0, 0, 0));
+			cvLine(img, pt1, pt2, CV_RGB(128, 128, 128), 1, 8, 0);
+		}
+	}
+	cvPutText(img, "Iteration number", cvPoint(draw_size / 2, img_size - 10), &font, CV_RGB(0, 0, 0));
+	cvPutText(img, "Press 's' to save: chart.jpg", cvPoint(5, img_size - 10), &font, CV_RGB(0, 0, 0));
+	printf(" If error occurs - run training with flag: -dont_show \n");
+	cvNamedWindow("average loss", CV_WINDOW_NORMAL);
+	cvMoveWindow("average loss", 0, 0);
+	cvResizeWindow("average loss", img_size, img_size);
+	cvShowImage("average loss", img);
+	cvWaitKey(20);
+	return img;
+}
+
+void draw_train_loss(IplImage* img, int img_size, float avg_loss, float max_img_loss, int current_batch, int max_batches)
+{
+	int img_offset = 50;
+	int draw_size = img_size - img_offset;
+	CvFont font;
+	cvInitFont(&font, CV_FONT_HERSHEY_COMPLEX_SMALL, 0.7, 0.7, 0, 1, CV_AA);
+	char char_buff[100];
+	CvPoint pt1, pt2;
+	pt1.x = img_offset + draw_size * (float)current_batch / max_batches;
+	pt1.y = draw_size * (1 - avg_loss / max_img_loss);
+	if (pt1.y < 0) pt1.y = 1;
+	cvCircle(img, pt1, 1, CV_RGB(0, 0, 255), CV_FILLED, 8, 0);
+
+	sprintf(char_buff, "current avg loss = %2.4f", avg_loss);
+	pt1.x = img_size / 2, pt1.y = 30;
+	pt2.x = pt1.x + 250, pt2.y = pt1.y + 20;
+	cvRectangle(img, pt1, pt2, CV_RGB(255, 255, 255), CV_FILLED, 8, 0);
+	pt1.y += 15;
+	cvPutText(img, char_buff, pt1, &font, CV_RGB(0, 0, 0));
+	cvShowImage("average loss", img);
+	int k = cvWaitKey(20);
+	if (k == 's' || current_batch == (max_batches-1)) cvSaveImage("chart.jpg", img, 0);
+}
+#endif	// OPENCV
 void transpose_image(image im)
 {
     assert(im.w == im.h);

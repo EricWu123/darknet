@@ -570,10 +570,10 @@ IplImage* draw_train_chart(float max_img_loss, int max_batches, int number_of_li
 	cvPutText(img, "Iteration number", cvPoint(draw_size / 2, img_size - 10), &font, CV_RGB(0, 0, 0));
 	cvPutText(img, "Press 's' to save: chart.jpg", cvPoint(5, img_size - 10), &font, CV_RGB(0, 0, 0));
 	printf(" If error occurs - run training with flag: -dont_show \n");
-	cvNamedWindow("average loss", CV_WINDOW_NORMAL);
-	cvMoveWindow("average loss", 0, 0);
-	cvResizeWindow("average loss", img_size, img_size);
-	cvShowImage("average loss", img);
+	// cvNamedWindow("average loss", CV_WINDOW_NORMAL);
+	// cvMoveWindow("average loss", 0, 0);
+	// cvResizeWindow("average loss", img_size, img_size);
+	// cvShowImage("average loss", img);
 	cvWaitKey(20);
 	return img;
 }
@@ -597,9 +597,12 @@ void draw_train_loss(IplImage* img, int img_size, float avg_loss, float max_img_
 	cvRectangle(img, pt1, pt2, CV_RGB(255, 255, 255), CV_FILLED, 8, 0);
 	pt1.y += 15;
 	cvPutText(img, char_buff, pt1, &font, CV_RGB(0, 0, 0));
-	cvShowImage("average loss", img);
-	int k = cvWaitKey(20);
-	if (k == 's' || current_batch == (max_batches-1)) cvSaveImage("chart.jpg", img, 0);
+	// cvShowImage("average loss", img);
+	// int k = cvWaitKey(20);
+    if(current_batch % 100 == 0)
+        save_image(ipl_to_image(img),"chart");
+	// if (k == 's' || current_batch == (max_batches-1)) cvSaveImage("chart.jpg", img, 0);
+    // if (k == 's' || current_batch == (max_batches-1)) save_image(ipl_to_image(img),"chart.jpg");
 }
 #endif	// OPENCV
 void transpose_image(image im)

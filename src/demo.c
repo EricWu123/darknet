@@ -1054,5 +1054,21 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
 {
     fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
 }
+void demo_metric(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
+{
+    fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
+}
+void demo_3(char *cfgfile, char *weightfile, char * datacfg_c, char * cfg_c,char * weights_c,
+            float thresh, int cam_index, const char *filename, char **names, int classes, int delay, 
+            char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
+{
+    fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
+}
+void demo_3_v2(char *cfgfile, char *weightfile, char datacfg_c[3][256], char cfg_c[3][256],char weights_c[3][256],
+            float thresh, int cam_index, const char *filename, char **names, int classes, int delay, 
+            char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
+{
+    fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
+}
 #endif
 

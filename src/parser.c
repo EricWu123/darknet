@@ -726,8 +726,12 @@ int is_network(section *s)
     return (strcmp(s->type, "[net]")==0
             || strcmp(s->type, "[network]")==0);
 }
-
 network *parse_network_cfg(char *filename)
+{
+	return parse_network_cfg_custom(filename, 0);
+}
+
+network *parse_network_cfg_custom(char *filename,int batch)
 {
     list *sections = read_cfg(filename);
     node *n = sections->front;
@@ -745,6 +749,7 @@ network *parse_network_cfg(char *filename)
     params.w = net->w;
     params.c = net->c;
     params.inputs = net->inputs;
+    if (batch > 0) net->batch = batch;
     params.batch = net->batch;
     params.time_steps = net->time_steps;
     params.net = net;

@@ -578,7 +578,7 @@ IplImage* draw_train_chart(float max_img_loss, int max_batches, int number_of_li
 	return img;
 }
 
-void draw_train_loss(IplImage* img, int img_size, float avg_loss, float max_img_loss, int current_batch, int max_batches)
+void draw_train_loss(IplImage* img, int img_size, float avg_loss, float max_img_loss, int current_batch, int max_batches,signed int flag)
 {
 	int img_offset = 50;
 	int draw_size = img_size - img_offset;
@@ -600,7 +600,11 @@ void draw_train_loss(IplImage* img, int img_size, float avg_loss, float max_img_
 	// cvShowImage("average loss", img);
 	// int k = cvWaitKey(20);
     if(current_batch % 100 == 0)
-        save_image(ipl_to_image(img),"chart");
+    {
+        char name[32] = "chart";
+        sprintf(name,"chart_%d",flag);
+        save_image(ipl_to_image(img),name);
+    }
 	// if (k == 's' || current_batch == (max_batches-1)) cvSaveImage("chart.jpg", img, 0);
     // if (k == 's' || current_batch == (max_batches-1)) save_image(ipl_to_image(img),"chart.jpg");
 }

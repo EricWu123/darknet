@@ -985,7 +985,6 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int boxes, in
 
         float dw = jitter * orig.w;
         float dh = jitter * orig.h;
-
         float new_ar = (orig.w + rand_uniform(-dw, dw)) / (orig.h + rand_uniform(-dh, dh));
         float scale = rand_uniform(.5, 2);
 

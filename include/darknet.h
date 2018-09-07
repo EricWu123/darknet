@@ -696,6 +696,7 @@ int option_find_int(list *l, char *key, int def);
 int option_find_int_quiet(list *l, char *key, int def);
 
 network *parse_network_cfg(char *filename);
+network *parse_network_cfg_custom(char *filename,int batch);
 void save_weights(network *net, char *filename);
 void load_weights(network *net, char *filename);
 void save_weights_upto(network *net, char *filename, int cutoff);

@@ -479,7 +479,7 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
 
     /**** save the images the have detect rectangles****/
     char save_name[32] = "1";
-    sprintf(save_name,"data/save/23000/%d",save_count);
+    sprintf(save_name,"data/save/9.15/22000/tt100k_%d",save_count);
     save_image(display,save_name);
     save_count++;
 

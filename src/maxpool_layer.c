@@ -27,10 +27,10 @@ maxpool_layer make_maxpool_layer(int batch, int h, int w, int c, int size, int s
     l.w = w;
     l.c = c;
     l.pad = padding;
-    l.out_w = (w + 2*padding)/stride;
-    l.out_h = (h + 2*padding)/stride;
-    // l.out_w = (w + padding - size)/stride + 1;
-    // l.out_h = (h + padding - size)/stride + 1;
+    // l.out_w = (w + 2*padding)/stride;
+    // l.out_h = (h + 2*padding)/stride;
+    l.out_w = (w + padding - size)/stride + 1;
+    l.out_h = (h + padding - size)/stride + 1;
     l.out_c = c;
     l.outputs = l.out_h * l.out_w * l.out_c;
     l.inputs = h*w*c;
@@ -81,10 +81,10 @@ void resize_maxpool_layer(maxpool_layer *l, int w, int h)
 void forward_maxpool_layer(const maxpool_layer l, network net)
 {
     int b,i,j,k,m,n;
-    int w_offset = -l.pad;
-    int h_offset = -l.pad;
-    // int w_offset = -l.pad/2;
-    // int h_offset = -l.pad/2;
+    // int w_offset = -l.pad;
+    // int h_offset = -l.pad;
+    int w_offset = -l.pad/2;
+    int h_offset = -l.pad/2;
     int h = l.out_h;
     int w = l.out_w;
     int c = l.c;

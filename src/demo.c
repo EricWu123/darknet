@@ -478,10 +478,10 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
     draw_detections_3(display,dets,nboxes,demo_thresh,name_,demo_alphabet,demo_alphabet_c,l.classes,confidence_c);
 
     /**** save the images the have detect rectangles****/
-    char save_name[32] = "1";
-    sprintf(save_name,"data/save/23000/%d",save_count);
-    save_image(display,save_name);
-    save_count++;
+    // char save_name[32] = "1";
+    // sprintf(save_name,"data/save/23000/%d",save_count);
+    // save_image(display,save_name);
+    // save_count++;
 
     // cvWaitKey(0);
     free_detections(dets, nboxes);

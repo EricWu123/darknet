@@ -415,6 +415,101 @@ void validate_classifier_single(char *datacfg, char *filename, char *weightfile)
         printf("%d: top 1: %f, top %d: %f\n", i, avg_acc/(i+1), topk, avg_topk/(i+1));
     }
 }
+//统计每个类别的准确率，利用map容器
+void validate_classifier_single_per_class(char *datacfg, char *filename, char *weightfile)
+{
+    map_int_t catagory_truth;
+    map_int_t catagory_result;
+    map_int_t catagory_result_topk;
+    map_init(&catagory_truth);
+    map_init(&catagory_result);
+    map_init(&catagory_result_topk);
+    
+    int i, j;
+    network *net = load_network(filename, weightfile, 0);
+    set_batch_network(net, 1);
+    srand(time(0));
+
+    list *options = read_data_cfg(datacfg);
+
+    char *label_list = option_find_str(options, "labels", "data/labels.list");
+    char *leaf_list = option_find_str(options, "leaves", 0);
+    if(leaf_list) change_leaves(net->hierarchy, leaf_list);
+    char *valid_list = option_find_str(options, "valid", "data/train.list");
+    int classes = option_find_int(options, "classes", 2);
+    int topk = option_find_int(options, "top", 1);
+
+    char **labels = get_labels(label_list);
+    list *plist = get_paths(valid_list);
+
+    char **paths = (char **)list_to_array(plist);
+    int m = plist->size;
+    free_list(plist);
+
+    float avg_acc = 0;
+    float avg_topk = 0;
+    int *indexes = calloc(topk, sizeof(int));
+    //初始化容器
+    for(i =0;i < classes;++i)
+    {
+        map_set(&catagory_result, labels[i], 0);
+        map_set(&catagory_truth, labels[i], 0);
+        map_set(&catagory_result_topk, labels[i], 0);
+    }
+    for(i = 0; i < m; ++i){
+        int class = -1;
+        char *path = paths[i];
+        for(j = 0; j < classes; ++j){
+            if(strstr(path, labels[j])){
+                map_set(&catagory_truth,labels[j],*map_get(&catagory_truth,labels[j]) + 1);
+                class = j;
+                break;
+            }
+        }
+        image im = load_image_color(paths[i], 0, 0);
+        image crop = letterbox_image(im, net->w, net->h);
+        // show_image(im, "orig");
+        // show_image(crop, "cropped");
+        // cvWaitKey(0);
+        float *pred = network_predict(net, crop.data);
+        if(net->hierarchy) hierarchy_predictions(pred, net->outputs, net->hierarchy, 1, 1);
+
+        free_image(im);
+        free_image(crop);
+        top_k(pred, classes, topk, indexes);
+
+        if(indexes[0] == class) 
+        {
+            avg_acc += 1;
+            map_set(&catagory_result,labels[class],*map_get(&catagory_result,labels[class]) + 1);
+        }
+        for(j = 0; j < topk; ++j){
+            if(indexes[j] == class) 
+            {
+                avg_topk += 1;
+                map_set(&catagory_result_topk,labels[class],*map_get(&catagory_result_topk,labels[class]) + 1);
+            }
+        }
+
+        printf("%s, %d, %f, %f, \n", paths[i], class, pred[0], pred[1]);
+        printf("%d: top 1: %f, top %d: %f\n", i, avg_acc/(i+1), topk, avg_topk/(i+1));
+    }
+    //计算每个类别的准确率
+    for(i =0;i < classes;++i)
+    {
+        int *truth = map_get(&catagory_truth,labels[i]);
+        int *result = map_get(&catagory_result,labels[i]);
+        int *result_topk = map_get(&catagory_result_topk,labels[i]);
+        if(*truth > 0)
+        {
+            printf("%s: top 1: %f, top %d: %f\n", labels[i], (float)(*result)/(*truth), topk, (float)(*result_topk)/(*truth));
+        }
+        else
+        {
+            printf("%s:%s\n",labels[i],"the test dataset has no the image of this catogory");
+        }
+    }
+}
 
 void validate_classifier_multi(char *datacfg, char *cfg, char *weights)
 {
@@ -1238,6 +1333,7 @@ void run_classifier(int argc, char **argv)
     else if(0==strcmp(argv[2], "valid10")) validate_classifier_10(data, cfg, weights);
     else if(0==strcmp(argv[2], "validcrop")) validate_classifier_crop(data, cfg, weights);
     else if(0==strcmp(argv[2], "validfull")) validate_classifier_full(data, cfg, weights);
+    else if(0==strcmp(argv[2], "valid_per_class")) validate_classifier_single_per_class(data, cfg, weights);
 }
 
 

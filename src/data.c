@@ -510,11 +510,11 @@ void fill_truth(char *path, char **labels, int k, float *truth)
     for(i = 0; i < k; ++i){
         int len = strlen(labels[i]);
         char* temp =  (char*)malloc(len);
-        for(int j = 0; j < len - 1; ++j)
+        for(int j = 0; j < len; ++j)
         {
             temp[j] = labels[i][j];
         }
-        temp[len - 1] = '\0';
+        temp[len] = '\0';
         if(strstr(path, temp)){
             truth[i] = 1;
             ++count;
@@ -1000,19 +1000,17 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int boxes, in
 
         float dx = rand_uniform(0, w - nw);
         float dy = rand_uniform(0, h - nh);
-
+        
         place_image(orig, nw, nh, dx, dy, sized);
-        // show_image(sized, "sized0");
+        printf("nw:%f nh:%f dx:%f dy:%f new_ar:%f jitter:%f scale:%f w:%d h:%d orig.w:%d \n ",nw,nh,dx,dy,new_ar,jitter,scale,w,h,orig.w);
+        show_image(sized, "sized");
+        show_image(orig, "orig");
+        cvWaitKey(0);
         random_distort_image(sized, hue, saturation, exposure);
     
         int flip = rand()%2;
         if(flip) flip_image(sized);
         d.X.vals[i] = sized.data;
-        // printf("width:%d %d %f\n",sized.w,sized.h,scale);
-        // show_image(orig, "orig");
-        // show_image(letter, "letter");
-        // show_image(sized, "sized");
-        // cvWaitKey(0);
 
         fill_truth_detection(random_paths[i], boxes, d.y.vals[i], classes, flip, -dx/w, -dy/h, nw/w, nh/h);
 

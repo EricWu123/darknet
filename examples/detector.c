@@ -14,6 +14,11 @@ static int coco_ids[] = {1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,2
 static network * net_classifier;
 map_int_t label2int;
 
+static char **names_classifier_v2[3];//for test_folder_d_and_c
+// static image **demo_alphabet;//新的图片标签
+// static image **demo_alphabet_c; // 原来的字母标签
+static network * net_classifier_v2[3];
+
 void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, int ngpus, int clear,int dont_show)
 {
     list *options = read_data_cfg(datacfg);
@@ -909,7 +914,132 @@ void test_folder(char *datacfg, char *cfgfile, char *weightfile, char *filename,
     break;
     }       
 }
+//detect and classify
+void test_folder_d_and_c(char *datacfg, char *cfgfile, char *weightfile,
+                         char datacfg_c[3][256], char cfg_c[3][256],char weights_c[3][256],
+                         char *filename, float thresh, float hier_thresh, int fullscreen)
+{
+    // list *options = read_data_cfg(datacfg);
+    // char *name_list = option_find_str(options, "names", "data/names.list");
+    // char **names = get_labels(name_list);
+    DIR * dir;
+    struct dirent *direntp; 
 
+    network *net = load_network(cfgfile, weightfile, 0);
+    set_batch_network(net, 1);
+    srand(2222222);
+    double time;
+    float nms=.35;
+
+    // the classifier
+    for(int i = 0;i < 3;++i)
+    {
+        net_classifier_v2[i] = load_network(cfg_c[i],weights_c[i],0);
+        set_batch_network(net_classifier_v2[i], 1);
+        list * options = read_data_cfg(datacfg_c[i]);
+        char *name_list = option_find_str(options, "names", 0);
+        if(!name_list) name_list = option_find_str(options, "labels", "data/labels.list");
+        names_classifier_v2[i] = get_labels(name_list);
+    }//the classifier end
+    
+    // image **alphabet_c = load_alphabet();
+    image **alphabet = load_alphabet_3();
+
+    while(1){
+        char * input = (char *)malloc(sizeof(char) * 256);
+        if(filename){
+            strcpy(input, filename);
+        } 
+        dir = opendir(input);
+
+        while ((direntp = readdir(dir)) != NULL)
+        {  
+            // printf("file:%s\n", direntp->d_name);
+            if(strcmp(direntp->d_name,".") == 0 || strcmp(direntp->d_name,"..") == 0) continue;
+            
+            char buff[256];
+            sprintf(buff,"%s%s",input,direntp->d_name);
+            
+            image im = load_image_color(buff,0,0);
+            image sized = letterbox_image(im, net->w, net->h);
+            layer l = net->layers[net->n-1]; //the parameter of  the last layer
+
+            float *X = sized.data;
+            time=what_time_is_it_now();
+            network_predict(net, X);
+            printf("%s: Predicted in %f seconds.\n", buff, what_time_is_it_now()-time);
+            int nboxes = 0;
+            thresh = .2;
+            // hier_thresh = 0;
+            detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes,1);
+
+            if (nms) do_nms_obj(dets, nboxes, l.classes, nms);
+            char **name_ = (char **)calloc(nboxes,sizeof(char*));//the boxes categories name
+            for(int i = 0;i < nboxes;i++)
+            {
+                char* temp = (char*)calloc(32,sizeof(char));
+                name_[i] = temp;   
+            }
+            float confidence_thresh = thresh;
+            for(int i = 0;i < nboxes;i++)
+            {
+                float prob_max = dets[i].prob[0];
+                int index = 0,j = 0;
+                for(int c = 1; c <l.classes; ++c)
+                {
+                if(dets[i].prob[c] > prob_max)
+                {
+                    prob_max = dets[i].prob[c];
+                    index = c;
+                }
+                }
+                j = index;
+                if(dets[i].prob[j] > confidence_thresh)
+                {
+                    char name[32] = "neg";
+
+                    int x = (dets[i].bbox.x - dets[i].bbox.w/2) * im.w;
+                    int y = (dets[i].bbox.y - dets[i].bbox.h/2) * im.h;
+                    int w = dets[i].bbox.w * im.w;
+                    int h = dets[i].bbox.h * im.h;
+
+                    if(x < 0) x = 0;
+                    if(w > im.w-1) w = im.w-1;
+                    if(y < 0) y = 0;
+                    if(h > im.h-1) h = im.h-1;
+
+                    image crop_im = crop_image(im,x,y,w,h);
+
+                    predict_classifier_demo(net_classifier_v2[j],names_classifier_v2[j],name,crop_im,NULL);
+                    // show_image(crop_im,"crop");
+                    // printf("name:%s\n",name);
+                    strcpy(name_[i], name);
+                    free_image(crop_im);
+                }
+            }
+            draw_detections_3(im,dets,nboxes,confidence_thresh,name_,alphabet,NULL,l.classes,NULL);
+            
+            // show_image(im,"im");
+            // cvWaitKey(0);
+
+            char save_name[256] = "1";
+            sprintf(save_name,"data/apollo/new_test_results/%s",direntp->d_name);
+            save_image(im,save_name);
+
+            free_detections(dets, nboxes);
+            for(int i = 0;i < nboxes;i++)
+            {
+                free(name_[i]);
+            }
+            free(name_);
+            free_image(im);
+            free_image(sized);
+        }
+    free(input);
+    closedir(dir);
+    break;
+    }       
+}
 /*
 // detect and classify
 void test_folder(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh, char *outfile, int fullscreen)
@@ -1163,7 +1293,7 @@ i:100-199
 p:200-299
 w:300-399
 */
-void init_map()
+void init_map1()
 {
     map_set(&label2int, "black", 0);
     map_set(&label2int, "red", 1);
@@ -1246,6 +1376,37 @@ void init_map()
     map_set(&label2int,"neg",32);
 }
 
+void init_map()
+{
+    FILE *fpRead=fopen("/home/cidi/darknet/data/name2num.list","r");  
+    if(fpRead==NULL)  
+    {  
+        printf("%s\n", "open txt error");
+        return;  
+    }
+    char StrLine[256];
+    char name[16] = "neg";
+    char num_char[16] = "32";
+    int num = 32;
+    char *ptr;
+    while (fgets(StrLine,256,fpRead)) 
+    {
+        // printf("%s\n", StrLine); //输出
+        ptr = strtok(StrLine, " ");
+        // printf("%s\n", ptr);
+        strcpy(name,ptr);
+        ptr = strtok(NULL, " "); 
+        // printf("%s\n", ptr);
+        strcpy(num_char,ptr);
+        num = atoi(num_char);
+        // printf("%d\n",num);
+        map_set(&label2int,name,num);
+        ptr = NULL;
+        
+    } 
+    fclose(fpRead);  
+
+}
 #ifdef OPENCV
 typedef struct {
 	float w, h;
@@ -2256,4 +2417,24 @@ void run_detector(int argc, char **argv)
     
     else if(0==strcmp(argv[2], "calc_anchors")) calc_anchors(datacfg, num_of_clusters, width, height, show);
     else if(0==strcmp(argv[2], "map")) validate_detector_map(datacfg, cfg, weights, thresh,NULL);
+    else if(0==strcmp(argv[2], "test_folder_d_and_c")){ 
+        // list *options = read_data_cfg(datacfg);
+        // int classes = option_find_int(options, "classes", 20);
+        // char *name_list = option_find_str(options, "names", "data/names.list");
+        // char **names = get_labels(name_list);
+        char datacfg_c[3][256];
+        char cfg_c[3][256];
+        char weights_c[3][256];
+        for(int i = 0;i < 3;++i)
+        {
+            strcpy(datacfg_c[i],argv[6 + 3 * i]);
+            strcpy(cfg_c[i],argv[7 + 3 * i]);
+            strcpy(weights_c[i],argv[8 + 3 * i]);
+        }
+        char *filename = (argc > 15) ? argv[15]: 0;
+        map_init(&label2int);
+        init_map();
+        test_folder_d_and_c(datacfg, cfg ,weights, datacfg_c, cfg_c,weights_c,filename, thresh, hier_thresh, fullscreen);
+    }
+      
 }

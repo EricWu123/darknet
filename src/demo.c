@@ -457,13 +457,13 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
         //   sprintf(temp_name,"data/crop/crop_image_%d",crop_i);
         //   crop_i++;
         //   save_image(crop_im,temp_name);
-        //   free_image(crop_im);
+          free_image(crop_im);
         }       
     }
-    for(i = 0;i < nboxes_tmp;++i)
-    {
-        printf("%f\n",confidence_c[i]);
-    }
+    // for(i = 0;i < nboxes_tmp;++i)
+    // {
+    //     printf("%f\n",confidence_c[i]);
+    // }
     // for(i = 0;i < nboxes;i++)
     // {
     //     printf("name_:%s\n",name_[i]);
@@ -483,7 +483,7 @@ void *detect_in_thread_3_v2(void *ptr) // detect light, sign, and lane
     // save_image(display,save_name);
     // save_count++;
 
-    // cvWaitKey(0);
+    cvWaitKey(0);
     free_detections(dets, nboxes);
     for(i = 0;i < nboxes;i++)
     {

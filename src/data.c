@@ -119,13 +119,16 @@ matrix load_image_augment_paths(char **paths, int n, int min, int max, int size,
         // } else {
         //     crop = random_augment_image(im, angle, aspect, min, max, size, size);
         // }
-        int flip = rand()%2;
-        if (flip) flip_image(crop);
+        // int flip = rand()%2;
+        // if (flip) flip_image(crop);
+        // show_image(crop, "crop1");
+        if(rand()%2)
         random_distort_image(crop, hue, saturation, exposure);
 
         
         // show_image(im, "orig");
-        // show_image(crop, "crop");
+        // show_image(crop, "crop2");
+        // printf("imgszie:%d %d cropsize:%d\n",im.w,im.h,size);
         // cvWaitKey(0);
         
         free_image(im);

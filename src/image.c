@@ -184,7 +184,8 @@ void draw_label(image a, int r, int c, image label, const float *rgb)
         for(i = 0; i < w && i + c < a.w; ++i){
             for(k = 0; k < label.c; ++k){
                 float val = get_pixel(label, i, j, k);
-                set_pixel(a, i+c, j+r, k, rgb[k] * val);
+                // set_pixel(a, i+c, j+r, k, rgb[k] * val);
+                set_pixel(a, i+c, j+r, k, val);
             }
         }
     }
@@ -276,7 +277,7 @@ image **load_alphabet_3()
             if(key == NULL)
                 continue;
             char buff[256];
-            sprintf(buff, "data/labels_/%d.png", i);
+            sprintf(buff, "data/label_num/%d.png", i);
             alphabets[j][i] = load_image_color(buff, 0, 0);
         }
     }
@@ -307,6 +308,11 @@ void draw_detections_3(image im, detection *dets, int num, float thresh, char **
         if(dets[i].prob[j] > thresh)
         {
             strcpy(labelstr,names[i]);
+            if(strcmp(labelstr,"neg") == 0)
+            {
+                printf("the classifier:the object seems to be fake!!!!\n");
+                continue;
+            }
             int width = im.h * .001;
             class = j;
             count++; // use for draw label position
@@ -348,38 +354,44 @@ void draw_detections_3(image im, detection *dets, int num, float thresh, char **
                 image label_re = resize_image(label,b.w*im.w,b.h*im.h);
                 // printf("pos:%d %d\n",count * label.w + 1,im.h - label.h - 1);               
                 //draw_label(im, im.h - 1, count * label.w + 1,label, rgb);
-                draw_label(im, bot, right,label_re, rgb);
+                int left_bot1 = bot + label_re.h;
+                int left_bot2 = right;
+                if(left_bot1 >im.h)
+                    left_bot1 = top;
+                if(left_bot2 + label_re.w > im.w)
+                    left_bot2 = left - label_re.w;
+                draw_label(im, left_bot1, left_bot2,label_re, rgb);
                 free_image(label);
                 free_image(label_re);
             }
-            if(alphabet_c)
-            {
-                char confidence[32] = {0}; 
-                gcvt(dets[i].prob[j],4,confidence);
-                // strcpy(confidence,gcvt(dets[i].prob[j]));
-                // printf("confidence:%s",confidence);
-                image label = get_label(alphabet_c, confidence, (im.h*.01));
-                float ratio_w = label.w /(b.w * im.w);
-                if(ratio_w > 0.5)
-                    ratio_w = 0.5;
-                else
-                    ratio_w = 1;
-                image label_tmp = resize_image(label,label.w * ratio_w,label.h * ratio_w);
-                draw_label(im, top +width, left, label_tmp, rgb);
-                // free_image(label);
-                char confidence1[32] = {0}; 
-                gcvt(confidence_c[i],4,confidence1);
-                label = get_label(alphabet_c, confidence1, (im.h*.01));
-                ratio_w = label.w /(b.w * im.w);
-                if(ratio_w > 0.5)
-                    ratio_w = 0.5;
-                else
-                    ratio_w = 1;
-                label_tmp = resize_image(label,label.w * ratio_w,label.h * ratio_w);
-                draw_label(im, bot + width, right+width, label_tmp, rgb);
-                free_image(label);
-                free_image(label_tmp);
-            }
+            // if(alphabet_c)
+            // {
+            //     char confidence[32] = {0}; 
+            //     gcvt(dets[i].prob[j],4,confidence);
+            //     // strcpy(confidence,gcvt(dets[i].prob[j]));
+            //     // printf("confidence:%s",confidence);
+            //     image label = get_label(alphabet_c, confidence, (im.h*.01));
+            //     float ratio_w = label.w /(b.w * im.w);
+            //     if(ratio_w > 0.5)
+            //         ratio_w = 0.5;
+            //     else
+            //         ratio_w = 1;
+            //     image label_tmp = resize_image(label,label.w * ratio_w,label.h * ratio_w);
+            //     draw_label(im, top +width, left, label_tmp, rgb);
+            //     // free_image(label);
+            //     char confidence1[32] = {0}; 
+            //     gcvt(confidence_c[i],4,confidence1);
+            //     label = get_label(alphabet_c, confidence1, (im.h*.01));
+            //     ratio_w = label.w /(b.w * im.w);
+            //     if(ratio_w > 0.5)
+            //         ratio_w = 0.5;
+            //     else
+            //         ratio_w = 1;
+            //     label_tmp = resize_image(label,label.w * ratio_w,label.h * ratio_w);
+            //     draw_label(im, bot + width, right+width, label_tmp, rgb);
+            //     free_image(label);
+            //     free_image(label_tmp);
+            // }
             if (dets[i].mask){
                 image mask = float_to_image(14, 14, 1, dets[i].mask);
                 image resized_mask = resize_image(mask, b.w*im.w, b.h*im.h);
@@ -976,7 +988,7 @@ void save_image_jpg(image p, const char *name)
     int x,y,k;
 
     char buff[256];
-    sprintf(buff, "%s.jpg", name);
+    sprintf(buff, "%s", name);
 
     IplImage *disp = cvCreateImage(cvSize(p.w,p.h), IPL_DEPTH_8U, p.c);
     int step = disp->widthStep;

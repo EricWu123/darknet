@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #ifdef OPENCV
-void validate_classifier_single_for_draw(char *datacfg, char *filename, char *weightfile,float precision[2]);
+void validate_classifier_single_for_draw(char *datacfg, network * net, char *weightfile,float precision[2]);
 IplImage* draw_train_chart(float max_img_loss, int max_batches, int number_of_lines, int img_size);
 void draw_train_loss(IplImage* img, int img_size, float avg_loss, float max_img_loss, int current_batch, int max_batchesm,signed int flag);
 #endif
@@ -164,12 +164,12 @@ void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus,
         printf("%ld, %.3f: %f, %f avg, %f rate, %lf seconds, %ld images\n", get_current_batch(net), (float)(*net->seen)/N, loss, avg_loss, get_current_rate(net), what_time_is_it_now()-time, *net->seen);
         free_data(train);
 #ifdef OPENCV
-        if(get_current_batch(net)%1000 == 0){
+        if(get_current_batch(net)%100 == 0){
 		if(!dont_show)
 			draw_train_loss(img, img_size, avg_loss, max_img_loss, get_current_batch(net), net->max_batches,-1);
         }
 #endif	// OPENCV
-
+        int epoch_last = epoch;
         if(*net->seen/N > epoch){
             epoch = *net->seen/N;
             char buff[256];
@@ -183,13 +183,18 @@ void train_classifier(char *datacfg, char *cfgfile, char *weightfile, int *gpus,
         }
 #ifdef OPENCV
         //precision
-        if(epoch > 10 && get_current_batch(net)%1000 == 0){
+        if(epoch > epoch_last){
         char buff[256];
-        sprintf(buff, "%s/%s.backup",backup_directory,base);
+        sprintf(buff, "%s/%s_%d.weights",backup_directory,base, epoch);
         float precision[2] = {0,0};
-        validate_classifier_single_for_draw(datacfg, cfgfile, buff,precision);
+        network *net1 = calloc(1,sizeof(network));
+        *net1 = *net;
+        validate_classifier_single_for_draw(datacfg, net1, buff,precision);
+        free(net1);
 		if(!dont_show)
-			draw_train_loss(ap_pic, img_size, precision[0], 1,get_current_batch(net), net->max_batches,0);
+        {
+			draw_train_loss(ap_pic, img_size, precision[0], 1,get_current_batch(net), net->max_batches,0); 
+        }
         }
 #endif	// OPENCV
 
@@ -396,10 +401,15 @@ void validate_classifier_full(char *datacfg, char *filename, char *weightfile)
     }
 }
 
-void validate_classifier_single_for_draw(char *datacfg, char *filename, char *weightfile,float precision[2])
+void validate_classifier_single_for_draw(char *datacfg, network * net, char *weightfile,float precision[2])
 {
     int i, j;
-    network *net = load_network(filename, weightfile, 0);
+    // network *net = load_network(filename, weightfile, 0);
+    net->batch = 1;
+    net->subdivisions = 1;
+    if (weightfile) {
+		load_weights(net, weightfile);
+	}
     set_batch_network(net, 1);
     srand(time(0));
 
@@ -449,7 +459,8 @@ void validate_classifier_single_for_draw(char *datacfg, char *filename, char *we
             if(indexes[j] == class) avg_topk += 1;
         }
 
-        printf("%s, %d, %f, %f, \n", paths[i], class, pred[0], pred[1]);
+        // printf("%s, %d, %f, %f, \n", paths[i], class, pred[0], pred[1]);
+        if(i%200 == 0)
         printf("%d: top 1: %f, top %d: %f\n", i, avg_acc/(i+1), topk, avg_topk/(i+1));
     }
     precision[0] = avg_acc/(i+1);
@@ -821,10 +832,11 @@ void predict_classifier_demo(network * net,char ** names,char *name,image im,flo
         // }
 
         int temp = indexes[0];
-        printf("%5.2f%%: %s\n", predictions[temp]*100, names[temp]);
-        // if(predictions[temp] * 100 >= 0) //if the accuracy is bigger than 50%
-        strcpy(name, names[temp]);
-        *confidence_tmp = predictions[temp];
+        // printf("%5.2f%%: %s\n", predictions[temp]*100, names[temp]);
+        if(predictions[temp] * 100 >= 80) //if the accuracy is bigger than 50%
+            strcpy(name, names[temp]);
+        if(confidence_tmp !=NULL)
+            *confidence_tmp = predictions[temp];
 
         // else
         //     strcpy(name, "FAKE");
@@ -883,7 +895,7 @@ void predict_classifier_(char *datacfg, char *cfgfile, char *weightfile, char *n
             // printf("111111%s\n",names[index]);  
         }
         int temp = indexes[0];
-        if(predictions[temp] * 100 >= 50) //if the accuracy is bigger than 50%
+        if(predictions[temp] * 100 >= 80) //if the accuracy is bigger than 50%
             strcpy(name, names[temp]);
         // name = names[temp];
         // printf("1111%s\n",name);
